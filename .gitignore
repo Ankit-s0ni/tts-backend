@@ -1,0 +1,48 @@
+# Environment variables (contains secrets)
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Development databases
+*.db
+*.sqlite
+*.sqlite3
+dev.db
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Output directories
+output/
+converted_outputs/
+tmp_chunks/
+
+# Backup files
+backup/
+
+# Test files
+test_outputs/
