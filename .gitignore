@@ -41,8 +41,13 @@ output/
 converted_outputs/
 tmp_chunks/
 
+# Model files (large)
+piper_models/
+
+# Input/output test directories
+input/
+test_inputs/
+test_outputs/
+
 # Backup files
 backup/
-
-# Test files
-test_outputs/
