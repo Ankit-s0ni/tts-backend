@@ -1,0 +1,38 @@
+version: "3.8"
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8002:8000"
+    env_file:
+      - .env
+    volumes:
+      - ../backend:/app:delegated
+      # Mount local piper models so worker can load ONNX models at runtime
+      - ../piper_models:/piper_models:ro
+    environment:
+      - DATABASE_URL=sqlite:///./dev.db
+      - REDIS_URL=redis://redis:6379/0
+      - PIPER_URL=http://piper-service:5000/
+      # Pass AWS / DynamoDB settings from .env into the container
+      # AWS / DynamoDB settings are read from `.env` via `env_file` and
+      # are explicitly forwarded into the container using substitution.
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET}
+      - DYNAMODB_TABLE_USERS=${DYNAMODB_TABLE_USERS}
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7
+    # No host port mapping needed for compose network. Remove to avoid conflicts.
+
+  # Optional piper service - user can run piper locally instead
+  # piper-service:
+  #   image: ghcr.io/rhasspy/piper:latest
+  #   ports:
+  #     - "5000:5000"
