@@ -31,6 +31,29 @@ services:
     image: redis:7
     # No host port mapping needed for compose network. Remove to avoid conflicts.
 
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: celery -A celery_worker.celery_app worker --loglevel=info -Q celery,default,parler_gpu_queue --concurrency=1 -n worker@%h
+    env_file:
+      - .env
+    volumes:
+      - ../backend:/app:delegated
+      - ../piper_models:/piper_models:ro
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET}
+      - DYNAMODB_TABLE_USERS=${DYNAMODB_TABLE_USERS}
+      - DYNAMODB_TABLE_NAME=${DYNAMODB_TABLE_NAME}
+    depends_on:
+      - redis
+      - backend
+    restart: unless-stopped
+
   # Optional piper service - user can run piper locally instead
   # piper-service:
   #   image: ghcr.io/rhasspy/piper:latest
