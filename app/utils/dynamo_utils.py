@@ -20,11 +20,11 @@ def _get_dynamodb_table(table_name: str):
 
 
 def update_job_s3(job_id: str, s3_key: str, s3_url: str):
-    """Update the `tts_jobs` DynamoDB table for the given job_id with S3 info.
+    """Update the `jobs` DynamoDB table for the given job_id with S3 info.
 
     Sets `audio_s3_key`, `audio_s3_url`, `status`='completed', and `completed_at` timestamp.
     """
-    table_name = os.getenv("DYNAMODB_TABLE_NAME", "tts_jobs")
+    table_name = os.getenv("DYNAMODB_TABLE_NAME", "jobs")
     table = _get_dynamodb_table(table_name)
 
     now = datetime.utcnow().isoformat()

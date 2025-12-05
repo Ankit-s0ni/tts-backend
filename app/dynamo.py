@@ -5,7 +5,7 @@ from botocore.config import Config
 from datetime import datetime
 from decimal import Decimal
 
-REGION = os.getenv("DYNAMODB_REGION", "us-west-2")
+REGION = os.getenv("DYNAMODB_REGION") or os.getenv("AWS_REGION", "ap-south-1")
 AUTOCREATE = os.getenv("DYNAMODB_AUTOCREATE", "true").lower() in ("1", "true", "yes")
 
 
@@ -203,6 +203,28 @@ def update_job_item(job_id: int, updates: dict) -> dict:
         ReturnValues="ALL_NEW",
     )
     return resp.get("Attributes", {})
+
+
+def get_user_jobs(user_id: str | int, limit: int = 50) -> list:
+    """Get all jobs for a specific user, sorted by creation date (newest first)."""
+    _ensure_tables()
+    table = _get_table("jobs")
+    try:
+        from boto3.dynamodb.conditions import Attr
+        
+        # Scan with filter for user_id
+        resp = table.scan(
+            FilterExpression=Attr("user_id").eq(str(user_id)),
+            Limit=limit
+        )
+        items = resp.get("Items", [])
+        
+        # Sort by created_at descending (newest first)
+        items.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+        return items
+    except Exception as e:
+        print(f"Error getting user jobs: {e}")
+        return []
 
 
 def list_voices() -> list:

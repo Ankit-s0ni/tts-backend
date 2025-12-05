@@ -10,7 +10,7 @@ HERE = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 load_dotenv(os.path.join(HERE, '.env'))
 
 def main():
-    region = os.getenv('DYNAMODB_REGION') or os.getenv('AWS_REGION') or 'us-west-2'
+    region = os.getenv('DYNAMODB_REGION') or os.getenv('AWS_REGION') or 'ap-south-1'
     endpoint = os.getenv('DYNAMODB_ENDPOINT_URL')
     kwargs = {'region_name': region}
     if endpoint:

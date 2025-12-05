@@ -51,3 +51,7 @@ test_outputs/
 
 # Backup files
 backup/
+
+# Temporary test/debug scripts
+tmp_*.py
+token.txt

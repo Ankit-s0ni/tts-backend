@@ -3,6 +3,7 @@ import os
 import uuid
 from typing import Tuple
 import boto3
+from botocore.exceptions import ClientError
 
 def _get_s3_client():
     aws_key = os.getenv("AWS_ACCESS_KEY_ID")
@@ -23,6 +24,34 @@ def _get_s3_client():
 
     session = boto3.session.Session(**session_kwargs)
     return session.client("s3", **client_kwargs)
+
+
+def generate_presigned_url(s3_key: str, expiration: int = 3600) -> str:
+    """Generate a pre-signed URL for an S3 object.
+    
+    Args:
+        s3_key: The S3 object key
+        expiration: Time in seconds for the URL to remain valid (default 1 hour)
+    
+    Returns:
+        Pre-signed URL as a string
+    """
+    bucket = os.getenv("AWS_S3_BUCKET")
+    if not bucket:
+        raise ValueError("AWS_S3_BUCKET environment variable is not set")
+    
+    s3 = _get_s3_client()
+    
+    try:
+        url = s3.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': bucket, 'Key': s3_key},
+            ExpiresIn=expiration
+        )
+        return url
+    except ClientError as e:
+        print(f"Error generating presigned URL: {e}")
+        raise
 
 
 def upload_audio(local_path: str, user_id: str, job_id: str) -> Tuple[str, str]:
