@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     # placeholders for future config
     S3_ENDPOINT: str = ""
     S3_BUCKET: str = ""
+    AWS_REGION: str = "ap-south-1"
+    DYNAMODB_TABLE_TEMP_AUDIO: str = "tts_temp_audio"
 
     class Config:
         env_file = ".env"

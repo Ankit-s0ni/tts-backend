@@ -7,6 +7,7 @@ import contextlib
 import traceback
 import logging
 from datetime import datetime
+from celery.schedules import crontab
 from app.dynamo import get_job_item, update_job_item
 from app.voice_catalog import get_voice
 from app.config import settings
@@ -21,6 +22,15 @@ from app.utils.dynamo_utils import update_job_s3
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 
 celery_app = Celery("backend_tasks", broker=REDIS_URL, backend=REDIS_URL)
+
+# Configure Celery Beat schedule for periodic tasks
+celery_app.conf.beat_schedule = {
+    'cleanup-temp-audio': {
+        'task': 'app.workers.cleanup.cleanup_yesterday_temp_audio',
+        'schedule': crontab(hour=12, minute=0),  # Run at 12:00 PM UTC daily
+        'options': {'queue': 'default'}
+    },
+}
 
 
 def _ensure_dirs(job_id: int):

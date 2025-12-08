@@ -7,12 +7,21 @@ from ..utils.s3_utils import generate_presigned_url
 import httpx
 from ..config import settings
 from ..auth import get_current_user
+import os
+import wave
+import uuid
+from pathlib import Path
+from datetime import datetime
 
 router = APIRouter(prefix="/tts", tags=["tts"])
 
 
 @router.post("/sync")
 async def tts_sync(request: Request):
+    """
+    Synchronous TTS endpoint that returns JSON with audio URL and duration.
+    Saves audio to a public directory and returns the URL.
+    """
     payload = await request.json()
 
     # If a voice id is provided and we have a DynamoDB entry with a concrete
@@ -59,8 +68,67 @@ async def tts_sync(request: Request):
     if resp.status_code != 200:
         raise HTTPException(status_code=resp.status_code, detail=resp.text)
 
-    content_type = resp.headers.get("content-type", "audio/wav")
-    return Response(content=resp.content, media_type=content_type)
+    # Get audio bytes from Piper
+    audio_bytes = resp.content
+    
+    # Calculate duration from WAV file
+    try:
+        import io
+        wav_io = io.BytesIO(audio_bytes)
+        with wave.open(wav_io, 'rb') as wav_file:
+            frames = wav_file.getnframes()
+            rate = wav_file.getframerate()
+            duration = frames / rate if rate > 0 else 0.0
+    except Exception:
+        duration = 0.0
+    
+    # Create output directory if it doesn't exist
+    output_dir = Path(__file__).parent.parent / "output"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Generate unique filename
+    filename = f"tts_{uuid.uuid4().hex}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.wav"
+    filepath = output_dir / filename
+    
+    # Save audio file
+    try:
+        with open(filepath, 'wb') as f:
+            f.write(audio_bytes)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save audio file: {str(e)}")
+    
+    # Return JSON response with audio URL and duration
+    # The URL path should be accessible via the backend server
+    audio_url = f"/tts/audio/{filename}"
+    
+    return JSONResponse({
+        "audio_url": audio_url,
+        "duration": duration,
+        "filename": filename,
+    })
+
+
+@router.get("/audio/{filename}")
+async def get_audio(filename: str):
+    """
+    Serve generated audio files.
+    """
+    # Security: only allow serving .wav files and prevent directory traversal
+    if not filename.endswith(".wav") or ".." in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    
+    output_dir = Path(__file__).parent.parent / "output"
+    filepath = output_dir / filename
+    
+    # Check if file exists
+    if not filepath.exists():
+        raise HTTPException(status_code=404, detail="Audio file not found")
+    
+    # Return the audio file
+    with open(filepath, 'rb') as f:
+        audio_bytes = f.read()
+    
+    return Response(content=audio_bytes, media_type="audio/wav")
 
 
 @router.post("/jobs", response_model=schemas.JobOut)

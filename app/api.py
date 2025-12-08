@@ -1,10 +1,16 @@
 from fastapi import APIRouter, Request, HTTPException
-from fastapi.responses import Response
+from fastapi.responses import Response, JSONResponse
 import io
 import wave
+import os
+import uuid
+import boto3
+from pathlib import Path
+from datetime import datetime
 from .config import settings
 from .voice_catalog import list_available_voices, get_voice
 from .voice_manager import get_voice_manager
+from .utils.s3_temp_audio import upload_to_s3, save_to_dynamodb
 
 router = APIRouter()
 
@@ -24,7 +30,7 @@ async def tts_sync(request: Request):
     """Synchronous TTS using Piper Python API with VoiceManager cache.
 
     Expects JSON body: { "text": "...", "voice": "...", ... }
-    Returns raw WAV bytes.
+    Returns JSON with S3 audio URL and duration.
     """
     payload = await request.json()
     text = payload.get("text", "")
@@ -75,9 +81,67 @@ async def tts_sync(request: Request):
             wav_file.writeframes(audio_data)
         
         wav_bytes = wav_io.getvalue()
-        return Response(content=wav_bytes, media_type="audio/wav")
+        
+        # Calculate duration
+        frames = len(audio_data) // (sample_width * sample_channels)
+        duration = frames / sample_rate if sample_rate > 0 else 0.0
+        
+        # Generate unique audio_id
+        audio_id = str(uuid.uuid4())
+        today_date = datetime.utcnow().strftime('%Y-%m-%d')
+        
+        # Upload to S3 and get signed URL
+        s3_url, s3_key = upload_to_s3(wav_bytes, audio_id, today_date)
+        
+        # Save metadata to DynamoDB
+        dynamodb = boto3.resource(
+            'dynamodb',
+            region_name=settings.AWS_REGION
+        )
+        temp_audio_table = dynamodb.Table(settings.DYNAMODB_TABLE_TEMP_AUDIO)
+        save_to_dynamodb(
+            temp_audio_table,
+            date=today_date,
+            audio_id=audio_id,
+            s3_url=s3_url,
+            text=text,
+            voice_id=voice_id,
+            duration=duration
+        )
+        
+        # Return JSON response with S3 URL and metadata
+        return JSONResponse({
+            "audio_id": audio_id,
+            "s3_url": s3_url,
+            "duration": duration,
+            "text": text,
+            "voice_id": voice_id,
+        })
         
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Synthesis failed: {str(e)}")
+
+
+@router.get("/tts/audio/{filename}")
+async def get_audio(filename: str):
+    """
+    Serve generated audio files.
+    """
+    # Security: only allow serving .wav files and prevent directory traversal
+    if not filename.endswith(".wav") or ".." in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    
+    output_dir = Path(__file__).parent.parent / "output"
+    filepath = output_dir / filename
+    
+    # Check if file exists
+    if not filepath.exists():
+        raise HTTPException(status_code=404, detail="Audio file not found")
+    
+    # Return the audio file
+    with open(filepath, 'rb') as f:
+        audio_bytes = f.read()
+    
+    return Response(content=audio_bytes, media_type="audio/wav")

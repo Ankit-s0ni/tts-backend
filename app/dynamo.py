@@ -78,6 +78,25 @@ def _ensure_tables():
                 )
             except ClientError:
                 pass
+            try:
+                dynamo.create_table(
+                    TableName="tts_temp_audio",
+                    KeySchema=[
+                        {"AttributeName": "date", "KeyType": "HASH"},
+                        {"AttributeName": "audio_id", "KeyType": "RANGE"},
+                    ],
+                    AttributeDefinitions=[
+                        {"AttributeName": "date", "AttributeType": "S"},
+                        {"AttributeName": "audio_id", "AttributeType": "S"},
+                    ],
+                    BillingMode="PAY_PER_REQUEST",
+                    TimeToLiveSpecification={
+                        "Enabled": True,
+                        "AttributeName": "ttl"
+                    }
+                )
+            except ClientError:
+                pass
         else:
             try:
                 existing = {t.name for t in dynamo.tables.all()}
@@ -118,6 +137,23 @@ def _ensure_tables():
                         {"AttributeName": "idx", "AttributeType": "N"},
                     ],
                     BillingMode="PAY_PER_REQUEST",
+                )
+            if "tts_temp_audio" not in existing:
+                dynamo.create_table(
+                    TableName="tts_temp_audio",
+                    KeySchema=[
+                        {"AttributeName": "date", "KeyType": "HASH"},
+                        {"AttributeName": "audio_id", "KeyType": "RANGE"},
+                    ],
+                    AttributeDefinitions=[
+                        {"AttributeName": "date", "AttributeType": "S"},
+                        {"AttributeName": "audio_id", "AttributeType": "S"},
+                    ],
+                    BillingMode="PAY_PER_REQUEST",
+                    TimeToLiveSpecification={
+                        "Enabled": True,
+                        "AttributeName": "ttl"
+                    }
                 )
     except ClientError:
         # if tables already being created concurrently, ignore
