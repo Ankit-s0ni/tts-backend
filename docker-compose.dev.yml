@@ -1,61 +1,75 @@
-version: "3.8"
+version: '3.8'
 services:
-  backend:
+  redis:
+    image: redis:7
+    ports:
+      - "6380:6379"
+    restart: unless-stopped
+
+  backend-api:
     build:
       context: .
       dockerfile: Dockerfile
-    ports:
-      - "8002:8000"
-    env_file:
-      - .env
     volumes:
-      - ../backend:/app:delegated
-      # Mount local piper models so worker can load ONNX models at runtime
-      - ../piper_models:/piper_models:ro
+      - ./:/app/
+      - ./piper_models/:/models/:ro
+    env_file:
+      - ./.env
     environment:
       - DATABASE_URL=sqlite:///./dev.db
       - REDIS_URL=redis://redis:6379/0
-      - PIPER_URL=http://piper-service:5000/
-      # Pass AWS / DynamoDB settings from .env into the container
-      # AWS / DynamoDB settings are read from `.env` via `env_file` and
-      # are explicitly forwarded into the container using substitution.
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - AWS_REGION=${AWS_REGION}
-      - AWS_S3_BUCKET=${AWS_S3_BUCKET}
-      - DYNAMODB_TABLE_USERS=${DYNAMODB_TABLE_USERS}
+      - PIPER_URL=http://piper:5000/
+      - MODELS_DIR=/models
+      - MAX_CACHED_VOICES=5
+      - DYNAMODB_AUTOCREATE=true
+    ports:
+      - "8001:8000"
     depends_on:
       - redis
-
-  redis:
-    image: redis:7
-    # No host port mapping needed for compose network. Remove to avoid conflicts.
+    restart: unless-stopped
 
   worker:
     build:
       context: .
       dockerfile: Dockerfile
     command: celery -A celery_worker.celery_app worker --loglevel=info -Q celery,default,parler_gpu_queue --concurrency=1 -n worker@%h
-    env_file:
-      - .env
     volumes:
-      - ../backend:/app:delegated
-      - ../piper_models:/piper_models:ro
+      - ./:/app/
+      - ./piper_models/:/models/:ro
+    env_file:
+      - ./.env
     environment:
       - REDIS_URL=redis://redis:6379/0
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - AWS_REGION=${AWS_REGION}
-      - AWS_S3_BUCKET=${AWS_S3_BUCKET}
-      - DYNAMODB_TABLE_USERS=${DYNAMODB_TABLE_USERS}
-      - DYNAMODB_TABLE_NAME=${DYNAMODB_TABLE_NAME}
+      - MODELS_DIR=/models
+      - MAX_CACHED_VOICES=5
+      - DYNAMODB_AUTOCREATE=true
     depends_on:
       - redis
-      - backend
+      - backend-api
     restart: unless-stopped
 
-  # Optional piper service - user can run piper locally instead
-  # piper-service:
-  #   image: ghcr.io/rhasspy/piper:latest
-  #   ports:
-  #     - "5000:5000"
+  piper:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./piper_models/:/models/
+      - ../scripts/:/srv/piper/scripts/:ro
+    ports:
+      - "5000:5000"
+    environment:
+      - MODELS_DIR=/models
+    restart: unless-stopped
+
+  flower:
+    image: mher/flower:0.9.7
+    ports:
+      - "5555:5555"
+    command: flower --broker=redis://redis:6379/0 --port=5555
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+volumes:
+  piper_models:
+  backend_code:

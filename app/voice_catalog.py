@@ -1,65 +1,99 @@
-"""Hard-coded voice catalog for development/testing.
+"""Dynamic voice catalog that scans filesystem for Piper models.
 
-This module provides a small, fixed set of voices and helper accessors
-so the system does not perform any dynamic scanning or syncing during
-startup. Keep the catalog limited to the three development voices.
+This module automatically discovers all .onnx model files in the MODELS_DIR
+and generates voice metadata dynamically. No hard-coded list required.
 """
 from typing import List, Dict, Optional
 import os
 from pathlib import Path
+import logging
 
-# Base models directory can be overridden with MODELS_DIR env var (defaults to ../piper_models)
-MODELS_DIR = os.getenv("MODELS_DIR", os.path.abspath(os.path.join(os.getcwd(), "..", "piper_models")))
+_LOGGER = logging.getLogger(__name__)
 
-def _model_path(*parts: str) -> str:
-    return str(Path(MODELS_DIR).joinpath(*parts))
+# Base models directory can be overridden with MODELS_DIR env var (defaults to /models)
+MODELS_DIR = os.getenv("MODELS_DIR", "/models")
 
-VOICE_CATALOG: List[Dict] = [
-    {
-        "id": "en_US-lessac-medium",
-        "display_name": "English (US) - Lessac (medium)",
-        "language": "en_US",
-        "gender": "neutral",
-        "engine": "piper",
-        "model_path": _model_path("en_US-lessac-medium", "en_US-lessac-medium.onnx"),
-        "available": True,
-    },
-    {
-        "id": "hi_IN-rohan-medium",
-        "display_name": "Hindi (IN) - Rohan (medium)",
-        "language": "hi_IN",
-        "gender": "male",
-        "engine": "piper",
-        # model file present in repo under this directory is named
-        # hi_IN-pratham-medium.onnx; point to the actual filename to avoid
-        # failing to load at runtime.
-        "model_path": _model_path("hi_IN-rohan-medium", "hi_IN-pratham-medium.onnx"),
-        "available": True,
-    },
-    {
-        "id": "hi_IN-priyamvada-medium",
-        "display_name": "Hindi (IN) - Priyamvada (medium)",
-        "language": "hi_IN",
-        "gender": "female",
-        "engine": "piper",
-        "model_path": _model_path("hi_IN-priyamvada-medium", "hi_IN-priyamvada-medium.onnx"),
-        "available": True,
-    },
-]
+# Cache for discovered voices (populated on first access)
+_VOICE_CATALOG_CACHE: Optional[List[Dict]] = None
+
+
+def _scan_models_directory() -> List[Dict]:
+    """Scan MODELS_DIR for .onnx files and build voice catalog."""
+    voices = []
+    models_path = Path(MODELS_DIR)
+    
+    if not models_path.exists():
+        _LOGGER.warning(f"Models directory does not exist: {MODELS_DIR}")
+        return voices
+    
+    try:
+        # Scan for directories containing .onnx files
+        for item in models_path.iterdir():
+            if not item.is_dir():
+                continue
+            
+            # Find .onnx files in this directory
+            onnx_files = list(item.glob("*.onnx"))
+            if not onnx_files:
+                continue
+            
+            # Use the first .onnx file found
+            onnx_file = onnx_files[0]
+            voice_id = item.name  # Folder name is the voice ID
+            
+            # Parse language and voice name from ID (e.g., "en_US-lessac-medium")
+            parts = voice_id.split("-")
+            language = parts[0] if parts else "unknown"
+            voice_name = "-".join(parts[1:]) if len(parts) > 1 else voice_id
+            
+            # Build display name
+            lang_display = language.replace("_", " ").title()
+            display_name = f"{lang_display} - {voice_name.replace('-', ' ').title()}"
+            
+            voices.append({
+                "id": voice_id,
+                "display_name": display_name,
+                "language": language,
+                "gender": "neutral",  # Could parse from .json config if available
+                "engine": "piper",
+                "model_path": str(onnx_file.absolute()),
+                "available": True,
+            })
+            
+    except Exception as e:
+        _LOGGER.error(f"Error scanning models directory {MODELS_DIR}: {e}")
+    
+    _LOGGER.info(f"Discovered {len(voices)} voice models in {MODELS_DIR}")
+    return voices
 
 
 def list_voices() -> List[Dict]:
-    return VOICE_CATALOG.copy()
+    """Return all discovered voices."""
+    global _VOICE_CATALOG_CACHE
+    if _VOICE_CATALOG_CACHE is None:
+        _VOICE_CATALOG_CACHE = _scan_models_directory()
+    return _VOICE_CATALOG_CACHE.copy()
 
 
 def list_available_voices() -> List[Dict]:
-    return [v for v in VOICE_CATALOG if v.get("available")]
+    """Return only available voices."""
+    return [v for v in list_voices() if v.get("available")]
 
 
 def get_voice(voice_id: str) -> Optional[Dict]:
-    for v in VOICE_CATALOG:
+    """Get a specific voice by ID. If not found, rescan and try again."""
+    # First attempt with current cache
+    for v in list_voices():
         if v.get("id") == voice_id:
             return v
+    
+    # If not found, refresh cache and try again (handles case where models were added after startup)
+    global _VOICE_CATALOG_CACHE
+    _VOICE_CATALOG_CACHE = None
+    for v in list_voices():
+        if v.get("id") == voice_id:
+            return v
+    
     return None
 
 
@@ -69,3 +103,10 @@ def engine_for_voice(voice_id: str) -> Optional[str]:
     if not v:
         return None
     return v.get("engine")
+
+
+def refresh_catalog():
+    """Force a rescan of the models directory."""
+    global _VOICE_CATALOG_CACHE
+    _VOICE_CATALOG_CACHE = None
+    _LOGGER.info("Voice catalog cache cleared - will rescan on next access")
