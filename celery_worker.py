@@ -8,15 +8,15 @@ import traceback
 import logging
 from datetime import datetime
 from celery.schedules import crontab
-from app.dynamo import get_job_item, update_job_item
+from app.dynamo_simple import get_job_item, update_job_item
 from app.voice_catalog import get_voice
 from app.config import settings
 from app.utils.chunker import chunk_text
 from app.voice_manager import get_voice_manager
 from typing import List
 import io
-from app.utils.s3_utils import upload_audio
-from app.utils.dynamo_utils import update_job_s3
+from app.utils.s3_utils_simple import upload_audio
+from app.utils.dynamo_utils_simple import update_job_s3
 
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")

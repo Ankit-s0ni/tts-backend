@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   redis:
     image: redis:7
@@ -56,7 +55,7 @@ services:
       - ./piper_models/:/models/
       - ../scripts/:/srv/piper/scripts/:ro
     ports:
-      - "5000:5000"
+      - "5002:5000"
     environment:
       - MODELS_DIR=/models
     restart: unless-stopped

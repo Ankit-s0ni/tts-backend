@@ -15,4 +15,7 @@ email-validator==1.2.0
 redis>=4.6.0
 piper-tts>=1.2.0
 numpy>=1.20.0
-pycognito==2024.5.1
+# Email service (Resend)
+resend>=0.7.0
+# Cloudinary for file uploads
+cloudinary>=1.36.0

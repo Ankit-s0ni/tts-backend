@@ -9,8 +9,9 @@ RUN apt-get update \
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy current directory (backend source) into the image
-COPY . /app/
+# Copy only the application code (excluding models and other large files via .dockerignore)
+COPY app/ ./app/
+COPY celery_worker.py parler_worker.py ./
 
 ENV PORT=8000
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

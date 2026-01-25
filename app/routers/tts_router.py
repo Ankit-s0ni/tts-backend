@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import Response, JSONResponse
 from .. import schemas
-from ..dynamo import create_job_item, get_job_item, get_user_jobs
+from ..dynamo_simple import create_job_item, get_job_item, get_user_jobs
 from ..voice_catalog import get_voice
-from ..utils.s3_utils import generate_presigned_url
+from ..utils.s3_utils_simple import generate_presigned_url
 import httpx
 from ..config import settings
 from ..auth import get_current_user

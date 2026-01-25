@@ -1,0 +1,76 @@
+# Large model files - these are mounted as volumes
+piper_models/
+*.onnx
+*.json
+
+# Development files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Docker files
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Documentation and notes
+*.md
+PLAN.md
+MIGRATION_GUIDE.md
+EMAIL_AUTH_GUIDE.md
+IMPLEMENTATION_COMPLETE.md
+MIGRATION_COMPLETE.md
+README*.md
+S3_*PLAN.md
+
+# Test files
+test_*.py
+tests/
+
+# Development scripts
+scripts/
+setup_*.sh
+alembic_migration_*.py
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+dev.db
+dev.db-journal
