@@ -4,16 +4,9 @@ services:
     restart: unless-stopped
     volumes:
       - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
     networks:
       - tts_network
-    sysctls:
-      - net.core.somaxconn=1024
-    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
 
   backend-api:
     build:
@@ -33,36 +26,20 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - PIPER_URL=http://piper:5000/
       - MODELS_DIR=/models
-      - MAX_CACHED_VOICES=10
+      - MAX_CACHED_VOICES=5
       - DYNAMODB_AUTOCREATE=false
       - LOG_LEVEL=INFO
     depends_on:
-      redis:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      - redis
     networks:
       - tts_network
-    # Resource limits (uncomment for Docker Swarm)
-    # deploy:
-    #   resources:
-    #     limits:
-    #       cpus: '1.0'
-    #       memory: 1G
-    #     reservations:
-    #       cpus: '0.5'
-    #       memory: 512M
 
   worker:
     build:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
-    command: celery -A celery_worker.celery_app worker --loglevel=info -Q celery,default,parler_gpu_queue --concurrency=2 -n worker@%h --max-tasks-per-child=1000
+    command: celery -A celery_worker.celery_app worker --loglevel=info -Q celery,default,parler_gpu_queue --concurrency=1 -n worker@%h --max-tasks-per-child=500
     volumes:
       - ./piper_models:/models:ro
       - app_data:/app/data
@@ -72,76 +49,14 @@ services:
       - ENVIRONMENT=production
       - REDIS_URL=redis://redis:6379/0
       - MODELS_DIR=/models
-      - MAX_CACHED_VOICES=10
+      - MAX_CACHED_VOICES=5
       - DYNAMODB_AUTOCREATE=false
       - LOG_LEVEL=INFO
     depends_on:
-      redis:
-        condition: service_healthy
-      backend-api:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "celery", "-A", "celery_worker.celery_app", "inspect", "ping"]
-      interval: 60s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      - redis
+      - backend-api
     networks:
       - tts_network
-    deploy:
-      resources:
-        limits:
-          cpus: '2.0'
-          memory: 2G
-        reservations:
-          cpus: '1.0'
-          memory: 1G
-
-  piper:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    command: python -m app.workers.piper_worker
-    ports:
-      - "127.0.0.1:5000:5000"
-    volumes:
-      - ./piper_models:/models:ro
-    environment:
-      - ENVIRONMENT=production
-      - MODELS_DIR=/models
-      - LOG_LEVEL=INFO
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    networks:
-      - tts_network
-    deploy:
-      resources:
-        limits:
-          cpus: '2.0'
-          memory: 2G
-        reservations:
-          cpus: '1.0'
-          memory: 1G
-
-  # Optional: Flower for monitoring (remove in strict production)
-  # flower:
-  #   image: mher/flower:2.0
-  #   restart: unless-stopped
-  #   ports:
-  #     - "127.0.0.1:5555:5555"
-  #   command: celery flower --broker=redis://redis:6379/0 --port=5555 --basic_auth=admin:secure_password_here
-  #   depends_on:
-  #     redis:
-  #       condition: service_healthy
-  #   networks:
-  #     - tts_network
-  #   environment:
-  #     - FLOWER_BASIC_AUTH=admin:secure_password_here
 
 volumes:
   redis_data:
@@ -152,7 +67,3 @@ volumes:
 networks:
   tts_network:
     driver: bridge
-    ipam:
-      driver: default
-      config:
-        - subnet: 172.20.0.0/16

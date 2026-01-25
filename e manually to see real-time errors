@@ -1,0 +1,91 @@
+Jan 25 23:23:13 srv1281834 systemd[1]: Starting voicetexta-backend.service - VoiceTexta TTS Backend Application...
+[0;38;5;245m░░ [0m[0;32mSubject: A start job for unit voicetexta-backend.service has begun execution[0m
+[0;38;5;245m░░[0m [0;32mDefined-By: systemd[0m
+[0;38;5;245m░░[0m [0;32mSupport: http://www.ubuntu.com/support[0m
+[0;38;5;245m░░[0m [0;32m[0m
+[0;38;5;245m░░[0m [0;32mA start job for unit voicetexta-backend.service has begun execution.[0m
+[0;38;5;245m░░[0m [0;32m[0m
+[0;38;5;245m░░[0m [0;32mThe job identifier is 84177.[0m
+Jan 25 23:23:13 srv1281834 docker[30625]: time="2026-01-25T23:23:13Z" level=warning msg="/root/voicetexta-backend/docker-compose.prod.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+Jan 25 23:23:14 srv1281834 docker[30625]:  Image redis:7-alpine Pulling
+Jan 25 23:23:18 srv1281834 docker[30625]:  380e8aa8b1fd Pulling fs layer
+Jan 25 23:23:18 srv1281834 docker[30625]:  f637881d1138 Pulling fs layer
+Jan 25 23:23:18 srv1281834 docker[30625]:  60c57c0072ef Pulling fs layer
+Jan 25 23:23:18 srv1281834 docker[30625]:  fc4343b4accd Pulling fs layer
+Jan 25 23:23:18 srv1281834 docker[30625]:  232f7549c9b0 Pulling fs layer
+Jan 25 23:23:18 srv1281834 docker[30625]:  c70aae7b5e0d Pulling fs layer
+Jan 25 23:23:18 srv1281834 docker[30625]:  4f4fb700ef54 Pulling fs layer
+Jan 25 23:23:18 srv1281834 docker[30625]:  d75b3becd998 Pulling fs layer
+Jan 25 23:23:18 srv1281834 docker[30625]:  5f8375faf7cb Download complete
+Jan 25 23:23:18 srv1281834 docker[30625]:  95050f4fb536 Download complete
+Jan 25 23:23:18 srv1281834 docker[30625]:  4f4fb700ef54 Download complete
+Jan 25 23:23:19 srv1281834 docker[30625]:  d75b3becd998 Download complete
+Jan 25 23:23:19 srv1281834 docker[30625]:  380e8aa8b1fd Download complete
+Jan 25 23:23:19 srv1281834 docker[30625]:  60c57c0072ef Download complete
+Jan 25 23:23:19 srv1281834 docker[30625]:  fc4343b4accd Download complete
+Jan 25 23:23:19 srv1281834 docker[30625]:  232f7549c9b0 Download complete
+Jan 25 23:23:19 srv1281834 docker[30625]:  c70aae7b5e0d Downloading [====>                                              ]  1.049MB/12.41MB
+Jan 25 23:23:19 srv1281834 docker[30625]:  f637881d1138 Download complete
+Jan 25 23:23:19 srv1281834 docker[30625]:  f637881d1138 Extracting 1 s
+Jan 25 23:23:19 srv1281834 docker[30625]:  c70aae7b5e0d Download complete
+Jan 25 23:23:19 srv1281834 docker[30625]:  f637881d1138 Extracting 1 s
+Jan 25 23:23:19 srv1281834 docker[30625]:  380e8aa8b1fd Extracting 1 s
+Jan 25 23:23:19 srv1281834 docker[30625]:  60c57c0072ef Pull complete
+Jan 25 23:23:19 srv1281834 docker[30625]:  fc4343b4accd Pull complete
+Jan 25 23:23:19 srv1281834 docker[30625]:  f637881d1138 Pull complete
+Jan 25 23:23:19 srv1281834 docker[30625]:  380e8aa8b1fd Pull complete
+Jan 25 23:23:19 srv1281834 docker[30625]:  c70aae7b5e0d Extracting 1 s
+Jan 25 23:23:19 srv1281834 docker[30625]:  4f4fb700ef54 Pull complete
+Jan 25 23:23:19 srv1281834 docker[30625]:  d75b3becd998 Pull complete
+Jan 25 23:23:19 srv1281834 docker[30625]:  232f7549c9b0 Pull complete
+Jan 25 23:23:19 srv1281834 docker[30625]:  c70aae7b5e0d Pull complete
+Jan 25 23:23:19 srv1281834 docker[30625]:  Image redis:7-alpine Pulled
+Jan 25 23:23:19 srv1281834 docker[30625]:  Network voicetexta-backend_tts_network Creating
+Jan 25 23:23:19 srv1281834 docker[30625]:  Network voicetexta-backend_tts_network Created
+Jan 25 23:23:19 srv1281834 docker[30625]:  Volume voicetexta-backend_app_data Creating
+Jan 25 23:23:19 srv1281834 docker[30625]:  Volume voicetexta-backend_app_data Created
+Jan 25 23:23:19 srv1281834 docker[30625]:  Volume voicetexta-backend_redis_data Creating
+Jan 25 23:23:19 srv1281834 docker[30625]:  Volume voicetexta-backend_redis_data Created
+Jan 25 23:23:19 srv1281834 docker[30625]:  Container voicetexta-backend-redis-1 Creating
+Jan 25 23:23:19 srv1281834 docker[30625]:  Container voicetexta-backend-piper-1 Creating
+Jan 25 23:23:19 srv1281834 docker[30625]:  Container voicetexta-backend-piper-1 Created
+Jan 25 23:23:19 srv1281834 docker[30625]:  Container voicetexta-backend-redis-1 Created
+Jan 25 23:23:19 srv1281834 docker[30625]:  Container voicetexta-backend-backend-api-1 Creating
+Jan 25 23:23:19 srv1281834 docker[30625]:  Container voicetexta-backend-backend-api-1 Created
+Jan 25 23:23:19 srv1281834 docker[30625]:  Container voicetexta-backend-worker-1 Creating
+Jan 25 23:23:19 srv1281834 docker[30625]:  Container voicetexta-backend-worker-1 Created
+Jan 25 23:23:19 srv1281834 docker[30625]:  Container voicetexta-backend-redis-1 Starting
+Jan 25 23:23:19 srv1281834 docker[30625]:  Container voicetexta-backend-piper-1 Starting
+Jan 25 23:23:20 srv1281834 docker[30625]:  Container voicetexta-backend-redis-1 Started
+Jan 25 23:23:20 srv1281834 docker[30625]:  Container voicetexta-backend-redis-1 Waiting
+Jan 25 23:23:20 srv1281834 docker[30625]:  Container voicetexta-backend-piper-1 Started
+Jan 25 23:23:50 srv1281834 docker[30625]:  Container voicetexta-backend-redis-1 Healthy
+Jan 25 23:23:50 srv1281834 docker[30625]:  Container voicetexta-backend-backend-api-1 Starting
+Jan 25 23:23:50 srv1281834 docker[30625]:  Container voicetexta-backend-backend-api-1 Started
+Jan 25 23:23:50 srv1281834 docker[30625]:  Container voicetexta-backend-redis-1 Waiting
+Jan 25 23:23:50 srv1281834 docker[30625]:  Container voicetexta-backend-backend-api-1 Waiting
+Jan 25 23:23:51 srv1281834 docker[30625]:  Container voicetexta-backend-redis-1 Healthy
+Jan 25 23:25:31 srv1281834 docker[30625]:  Container voicetexta-backend-backend-api-1 Error dependency backend-api failed to start
+Jan 25 23:25:31 srv1281834 docker[30625]: dependency failed to start: container voicetexta-backend-backend-api-1 is unhealthy
+Jan 25 23:25:31 srv1281834 systemd[1]: [0;1;39m[0;1;31m[0;1;39mvoicetexta-backend.service: Main process exited, code=exited, status=1/FAILURE[0m
+[0;38;5;245m░░ [0m[0;32mSubject: Unit process exited[0m
+[0;38;5;245m░░[0m [0;32mDefined-By: systemd[0m
+[0;38;5;245m░░[0m [0;32mSupport: http://www.ubuntu.com/support[0m
+[0;38;5;245m░░[0m [0;32m[0m
+[0;38;5;245m░░[0m [0;32mAn ExecStart= process belonging to unit voicetexta-backend.service has exited.[0m
+[0;38;5;245m░░[0m [0;32m[0m
+[0;38;5;245m░░[0m [0;32mThe process' exit code is 'exited' and its exit status is 1.[0m
+Jan 25 23:25:31 srv1281834 systemd[1]: [0;1;38;5;185m[0;1;39m[0;1;38;5;185mvoicetexta-backend.service: Failed with result 'exit-code'.[0m
+[0;38;5;245m░░ [0m[0;32mSubject: Unit failed[0m
+[0;38;5;245m░░[0m [0;32mDefined-By: systemd[0m
+[0;38;5;245m░░[0m [0;32mSupport: http://www.ubuntu.com/support[0m
+[0;38;5;245m░░[0m [0;32m[0m
+[0;38;5;245m░░[0m [0;32mThe unit voicetexta-backend.service has entered the 'failed' state with result 'exit-code'.[0m
+Jan 25 23:25:31 srv1281834 systemd[1]: [0;1;31m[0;1;39m[0;1;31mFailed to start voicetexta-backend.service - VoiceTexta TTS Backend Application.[0m
+[0;38;5;245m░░ [0m[0;32mSubject: A start job for unit voicetexta-backend.service has failed[0m
+[0;38;5;245m░░[0m [0;32mDefined-By: systemd[0m
+[0;38;5;245m░░[0m [0;32mSupport: http://www.ubuntu.com/support[0m
+[0;38;5;245m░░[0m [0;32m[0m
+[0;38;5;245m░░[0m [0;32mA start job for unit voicetexta-backend.service has finished with a failure.[0m
+[0;38;5;245m░░[0m [0;32m[0m
+[0;38;5;245m░░[0m [0;32mThe job identifier is 84177 and the job result is failed.[0m
