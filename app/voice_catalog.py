@@ -1,7 +1,7 @@
-"""Dynamic voice catalog that scans filesystem for Piper models.
+"""Dynamic voice catalog that scans filesystem for Piper models and includes Parler voices.
 
 This module automatically discovers all .onnx model files in the MODELS_DIR
-and generates voice metadata dynamically. No hard-coded list required.
+and generates voice metadata dynamically. Also includes pre-defined Parler voices.
 """
 from typing import List, Dict, Optional
 import os
@@ -15,6 +15,16 @@ MODELS_DIR = os.getenv("MODELS_DIR", "/models")
 
 # Cache for discovered voices (populated on first access)
 _VOICE_CATALOG_CACHE: Optional[List[Dict]] = None
+
+# Parler TTS voices (Indian regional languages and more)
+# NOTE: Commenting out Parler - using Piper models instead which are lighter and simpler
+_PARLER_VOICES = []
+
+# Instead, we'll use Piper's built-in Indian language models:
+# - hi_IN-pratham-medium (Hindi)
+# - hi_IN-priyamvada-medium (Hindi - female)
+# - hi_IN-rohan-medium (Hindi)
+# - te_IN-rama-medium (Telugu)
 
 
 def _scan_models_directory() -> List[Dict]:
@@ -68,10 +78,10 @@ def _scan_models_directory() -> List[Dict]:
 
 
 def list_voices() -> List[Dict]:
-    """Return all discovered voices."""
+    """Return all discovered voices (Piper + Parler)."""
     global _VOICE_CATALOG_CACHE
     if _VOICE_CATALOG_CACHE is None:
-        _VOICE_CATALOG_CACHE = _scan_models_directory()
+        _VOICE_CATALOG_CACHE = _scan_models_directory() + _PARLER_VOICES
     return _VOICE_CATALOG_CACHE.copy()
 
 

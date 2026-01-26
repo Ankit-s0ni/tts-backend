@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import Response, JSONResponse
 from .. import schemas
 from ..mongo_db import create_job_item, get_job_item, get_user_jobs
-from ..voice_catalog import get_voice
+from ..voice_catalog import get_voice, engine_for_voice
 from ..utils.s3_utils_simple import generate_presigned_url
 import httpx
 from ..config import settings
@@ -12,6 +12,9 @@ import wave
 import uuid
 from pathlib import Path
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/tts", tags=["tts"])
 
@@ -20,29 +23,99 @@ router = APIRouter(prefix="/tts", tags=["tts"])
 async def tts_sync(request: Request):
     """
     Synchronous TTS endpoint that returns JSON with audio URL and duration.
-    Saves audio to a public directory and returns the URL.
+    Routes to either Piper or Parler based on voice engine.
     """
     payload = await request.json()
+    voice_id = payload.get("voice")
+    
+    # Get voice metadata
+    voice = get_voice(voice_id) if voice_id else None
+    engine = voice.get("engine") if voice else "piper"
+    
+    # Route to appropriate engine
+    if engine == "parler":
+        return await _tts_sync_parler(payload, voice)
+    else:
+        return await _tts_sync_piper(payload, voice)
 
+
+async def _tts_sync_parler(payload: dict, voice: dict):
+    """Handle Parler TTS synthesis."""
+    text = payload.get("text", "")
+    voice_id = payload.get("voice")
+    
+    if not text:
+        raise HTTPException(status_code=400, detail="Text is required")
+    
+    if not voice_id:
+        raise HTTPException(status_code=400, detail="Voice is required")
+    
+    try:
+        # Import synthesis function
+        import sys
+        sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+        from parler_worker import synthesize_parler
+        
+        # Call Parler synthesis directly (synchronous)
+        result = synthesize_parler(
+            job_id=0,  # Dummy job_id for sync call
+            text=text,
+            voice_id=voice_id
+        )
+        
+        if result.get("status") != "success":
+            error_msg = result.get("error", "Unknown error")
+            raise HTTPException(status_code=500, detail=f"Parler synthesis failed: {error_msg}")
+        
+        # Get audio file
+        filename = result.get("audio_file")
+        output_dir = Path(__file__).parent.parent / "output"
+        filepath = output_dir / filename
+        
+        with open(filepath, 'rb') as f:
+            audio_bytes = f.read()
+        
+        # Calculate duration
+        try:
+            import io
+            wav_io = io.BytesIO(audio_bytes)
+            with wave.open(wav_io, 'rb') as wav_file:
+                frames = wav_file.getnframes()
+                rate = wav_file.getframerate()
+                duration = frames / rate if rate > 0 else 0.0
+        except Exception:
+            duration = 0.0
+        
+        audio_url = f"/tts/audio/{filename}"
+        
+        return JSONResponse({
+            "audio_url": audio_url,
+            "duration": duration,
+            "filename": filename,
+            "engine": "parler"
+        })
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Parler synthesis error: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+async def _tts_sync_piper(payload: dict, voice: dict = None):
+    """Handle Piper TTS synthesis."""
     # If a voice id is provided and we have a DynamoDB entry with a concrete
     # `model_path`, inject that into the Piper request as `model` so Piper will
     # use the exact ONNX file instead of falling back to the server default.
     try:
         voice_id = payload.get("voice")
-        if voice_id:
-            v = get_voice(voice_id)
-            if v and v.get("model_path"):
-                # Forward a voice id (model name) rather than a filesystem
-                # `model` path — Piper will look for <model_id>.onnx in the
-                # mounted data directories and load it.
-                from pathlib import Path
-
-                model_id = Path(v["model_path"]).stem
-                payload["voice"] = model_id
-                try:
-                    payload.pop("model", None)
-                except Exception:
-                    pass
+        if voice_id and voice and voice.get("model_path"):
+            model_id = Path(voice["model_path"]).stem
+            payload["voice"] = model_id
+            try:
+                payload.pop("model", None)
+            except Exception:
+                pass
     except Exception:
         # non-fatal: if lookups fail, continue and let Piper decide
         pass
@@ -60,7 +133,7 @@ async def tts_sync(request: Request):
             # Log the model being requested for easier debugging and show if
             # a 'voice' key is accidentally being forwarded.
             if payload.get("model") or payload.get("voice"):
-                print(f"[tts_sync] Posting to Piper with keys={list(payload.keys())} voice={payload.get('voice')} model={payload.get('model')}")
+                logger.info(f"[tts_sync_piper] Posting to Piper with keys={list(payload.keys())} voice={payload.get('voice')} model={payload.get('model')}")
             resp = await client.post(target, json=payload)
         except httpx.RequestError as exc:
             raise HTTPException(status_code=502, detail=f"Piper request failed: {exc}")
@@ -105,6 +178,7 @@ async def tts_sync(request: Request):
         "audio_url": audio_url,
         "duration": duration,
         "filename": filename,
+        "engine": "piper"
     })
 
 

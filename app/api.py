@@ -4,15 +4,24 @@ import io
 import wave
 import os
 import uuid
-import boto3
+import tempfile
+import cloudinary
+import cloudinary.uploader
 from pathlib import Path
 from datetime import datetime
 from .config import settings
 from .voice_catalog import list_available_voices, get_voice
 from .voice_manager import get_voice_manager
-from .utils.s3_temp_audio import upload_to_s3, save_to_dynamodb
 
 router = APIRouter()
+
+# Configure Cloudinary at module level if credentials are available
+if settings.CLOUDINARY_CLOUD_NAME:
+    cloudinary.config(
+        cloud_name=settings.CLOUDINARY_CLOUD_NAME,
+        api_key=settings.CLOUDINARY_API_KEY,
+        api_secret=settings.CLOUDINARY_API_SECRET
+    )
 
 
 @router.get("/voices")
@@ -27,10 +36,10 @@ async def list_voices_api():
 
 @router.post("/tts/sync")
 async def tts_sync(request: Request):
-    """Synchronous TTS using Piper Python API with VoiceManager cache.
+    """Synchronous TTS using Piper for all voices.
 
-    Expects JSON body: { "text": "...", "voice": "...", ... }
-    Returns JSON with S3 audio URL and duration.
+    Expects JSON body: { "text": "...", "voice": "..." }
+    Returns JSON with audio URL and duration.
     """
     payload = await request.json()
     text = payload.get("text", "")
@@ -40,18 +49,33 @@ async def tts_sync(request: Request):
         raise HTTPException(status_code=400, detail="No text provided")
     
     try:
-        # Get voice metadata from DynamoDB
+        # Get voice metadata
         voice_meta = get_voice(voice_id)
         if not voice_meta:
             raise HTTPException(status_code=404, detail=f"Voice '{voice_id}' not found")
         
-        model_path = voice_meta.get("model_path")
-        if not model_path:
-            raise HTTPException(status_code=500, detail=f"No model_path for voice '{voice_id}'")
-        
+        # Use Piper for synthesis
+        return await _tts_sync_piper(text, voice_id, voice_meta)
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"TTS error: {str(e)}")
+
+
+async def _tts_sync_piper(text: str, voice_id: str, voice_meta: dict):
+    """Handle Piper TTS synthesis."""
+    model_path = voice_meta.get("model_path")
+    if not model_path:
+        raise HTTPException(status_code=500, detail=f"No model_path for voice '{voice_id}'")
+    
+    try:
         # Load voice with caching
         voice_manager = get_voice_manager()
         voice = voice_manager.get_voice(model_path)
+        
+        if voice is None:
+            raise HTTPException(status_code=500, detail="Failed to load Piper voice model")
         
         # Synthesize audio using Piper Python API
         audio_chunks = []
@@ -86,42 +110,68 @@ async def tts_sync(request: Request):
         frames = len(audio_data) // (sample_width * sample_channels)
         duration = frames / sample_rate if sample_rate > 0 else 0.0
         
-        # Generate unique audio_id
-        audio_id = str(uuid.uuid4())
-        today_date = datetime.utcnow().strftime('%Y-%m-%d')
+        # Create output directory for temporary storage
+        output_dir = Path(__file__).parent.parent / "output"
+        output_dir.mkdir(parents=True, exist_ok=True)
         
-        # Upload to S3 and get signed URL
-        s3_url, s3_key = upload_to_s3(wav_bytes, audio_id, today_date)
+        # Save audio file to disk temporarily
+        filename = f"tts_{uuid.uuid4().hex[:12]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.wav"
+        filepath = output_dir / filename
         
-        # Save metadata to DynamoDB
-        dynamodb = boto3.resource(
-            'dynamodb',
-            region_name=settings.AWS_REGION
-        )
-        temp_audio_table = dynamodb.Table(settings.DYNAMODB_TABLE_TEMP_AUDIO)
-        save_to_dynamodb(
-            temp_audio_table,
-            date=today_date,
-            audio_id=audio_id,
-            s3_url=s3_url,
-            text=text,
-            voice_id=voice_id,
-            duration=duration
-        )
+        try:
+            with open(filepath, 'wb') as f:
+                f.write(wav_bytes)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to save audio file: {str(e)}")
         
-        # Return JSON response with S3 URL and metadata
-        return JSONResponse({
-            "audio_id": audio_id,
-            "s3_url": s3_url,
+        # Upload to Cloudinary
+        audio_url = None
+        try:
+            if settings.CLOUDINARY_CLOUD_NAME and settings.CLOUDINARY_CLOUD_NAME.strip():
+                print(f"DEBUG: Uploading to Cloudinary...")
+                # Create a unique public_id
+                public_id = f"tts/{voice_id}/{uuid.uuid4().hex[:12]}"
+                
+                # Upload the WAV file to Cloudinary
+                result = cloudinary.uploader.upload(
+                    str(filepath),
+                    resource_type="video",
+                    public_id=public_id,
+                    overwrite=False
+                )
+                
+                audio_url = result.get("secure_url")
+                if audio_url:
+                    print(f"✅ Successfully uploaded to Cloudinary: {audio_url}")
+                else:
+                    print(f"Cloudinary upload result: {result}")
+        except Exception as e:
+            print(f"Cloudinary upload failed: {e}")
+            import traceback
+            traceback.print_exc()
+        
+        # If Cloudinary upload fails, fall back to local URL
+        if not audio_url:
+            audio_url = f"/tts/audio/{filename}"
+            print(f"Using fallback local URL: {audio_url}")
+        
+        # Return response with audio URL
+        response = {
             "duration": duration,
             "text": text,
             "voice_id": voice_id,
-        })
+            "engine": "piper",
+            "sample_rate": sample_rate,
+            "status": "success",
+            "audio_url": audio_url
+        }
+        
+        return JSONResponse(response)
         
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Synthesis failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Piper synthesis failed: {str(e)}")
 
 
 @router.get("/tts/audio/{filename}")
