@@ -4,7 +4,7 @@ Handles registration, login, email verification, and password reset.
 """
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from datetime import timedelta
 
 from ..db import get_db
@@ -36,6 +36,17 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
     full_name: str | None = None
+    
+    @field_validator('password')
+    @classmethod
+    def validate_password_length(cls, v: str) -> str:
+        """Validate password length for bcrypt compatibility."""
+        password_bytes = len(v.encode('utf-8'))
+        if password_bytes > 72:
+            raise ValueError(f"Password is too long ({password_bytes} bytes). Maximum length is 72 bytes.")
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters long.")
+        return v
 
 
 class LoginRequest(BaseModel):
@@ -60,6 +71,17 @@ class ResetPasswordRequest(BaseModel):
     email: EmailStr
     code: str
     new_password: str
+    
+    @field_validator('new_password')
+    @classmethod
+    def validate_password_length(cls, v: str) -> str:
+        """Validate password length for bcrypt compatibility."""
+        password_bytes = len(v.encode('utf-8'))
+        if password_bytes > 72:
+            raise ValueError(f"Password is too long ({password_bytes} bytes). Maximum length is 72 bytes.")
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters long.")
+        return v
 
 
 class TokenResponse(BaseModel):
@@ -89,9 +111,10 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
     """
     Register a new user with email and password.
     Sends a verification code to the email.
+    Password requirements: 8-72 bytes (validated by Pydantic).
     """
     try:
-        # Create user (will raise ValueError if email exists)
+        # Create user (will raise ValueError if email exists or password invalid)
         user = create_user(
             db=db,
             email=payload.email,
@@ -124,15 +147,20 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
         }
         
     except ValueError as e:
+        # Handle validation errors (email exists, password too long, etc.)
+        error_msg = str(e)
+        print(f"Registration validation error: {error_msg}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
+            detail=error_msg
         )
     except Exception as e:
-        print(f"Registration error: {e}")
+        # Handle unexpected errors
+        error_msg = str(e)
+        print(f"Registration error: {error_msg}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Registration failed"
+            detail=f"Registration failed: {error_msg}"
         )
 
 
@@ -285,6 +313,7 @@ def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db
 def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db)):
     """
     Reset password using the reset code.
+    Password is automatically validated by Pydantic (8-72 bytes).
     """
     # Verify the reset code
     is_valid = verify_code(

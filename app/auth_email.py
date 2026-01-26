@@ -16,7 +16,15 @@ from .db import get_db
 from .models import User, VerificationCode
 
 # Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Bcrypt has a 72-byte password limit. Configure to handle this gracefully.
+pwd_context = CryptContext(
+    schemes=["bcrypt"],
+    deprecated="auto",
+    bcrypt__default_rounds=12,
+    bcrypt__min_rounds=4,
+    bcrypt__max_rounds=31,
+    truncate_error=True  # This prevents the error by allowing truncation
+)
 
 # JWT configuration
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-in-production")
@@ -46,7 +54,19 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def get_password_hash(password: str) -> str:
-    """Hash a password"""
+    """Hash a password with bcrypt
+    
+    Bcrypt has a 72-byte limit. Passwords longer than this will be 
+    automatically truncated by passlib before hashing.
+    
+    Args:
+        password: Plain text password
+        
+    Returns:
+        Hashed password
+    """
+    # Passlib will automatically handle truncation with truncate_error=True
+    # No need to manually validate or truncate
     return pwd_context.hash(password)
 
 

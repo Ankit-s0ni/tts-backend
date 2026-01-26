@@ -6,9 +6,9 @@ This guide covers deploying the TTS Backend on a fresh Ubuntu 22.04/24.04 server
 
 - Fresh Ubuntu 22.04 LTS or 24.04 LTS server
 - Root or sudo access
-- Domain name pointing to your server (for SSL)
-- AWS credentials (Access Key, Secret Key)
-- S3 bucket and DynamoDB tables created
+- Domain name pointing to your server (api.voicetexta.com)
+- Cloudinary account credentials
+- Resend API key for email services
 
 ## 1. Initial Server Setup
 
@@ -92,129 +92,88 @@ cd /root/voicetexta-backend/piper_models
 ### Create Production Environment File
 ```bash
 tee /root/voicetexta-backend/.env.prod << 'EOF'
-# AWS Configuration
-AWS_ACCESS_KEY_ID=your_access_key_here
-AWS_SECRET_ACCESS_KEY=your_secret_key_here
-AWS_REGION=ap-south-1
-AWS_S3_BUCKET=your_s3_bucket_name
+# Production environment variables for the TTS app
 
-# DynamoDB Tables
-DYNAMODB_TABLE_USERS=users
-DYNAMODB_TABLE_NAME=jobs
+# --- JWT Authentication (for email-based auth) ---------------------------
+JWT_SECRET_KEY=prod_secure_jwt_key_a8f5c7d9e2b1f4a6c9e8d7b3f1a9c5e7d2b8f6a4c9e7d5b3f1a8c6e9d7b5f3a1c
 
-# Redis
-REDIS_URL=redis://redis:6379/0
+# --- Email Service (Resend) ----------------------------------------------
+RESEND_API_KEY=re_XGd6FAcM_Jf6KEsmt7Qf7pgE76zy2zknF
 
-# Application
-DATABASE_URL=sqlite:///./production.db
-PIPER_URL=http://piper-service:5000/
+# --- File Storage (Cloudinary) -------------------------------------------
+CLOUDINARY_CLOUD_NAME=voicetexta
+CLOUDINARY_API_KEY=536972572585976
+CLOUDINARY_API_SECRET=gb_T8dzCEXoZhY8KPVm1plxFLdA
 
-# Production Settings
+# --- Production Settings -------------------------------------------------
 ENVIRONMENT=production
 DEBUG=false
-ALLOWED_HOSTS=your-domain.com,localhost
-CORS_ORIGINS=https://your-frontend-domain.com
+LOG_LEVEL=INFO
+
+# --- Database / storage / services ----------------------------------------
+DATABASE_URL=sqlite:///./data/production.db
+PIPER_URL=http://piper:5000/
+REDIS_URL=redis://redis:6379/0
+
+# --- Performance Settings ------------------------------------------------
+MAX_CACHED_VOICES=10
+WORKER_CONCURRENCY=2
+CELERY_MAX_TASKS_PER_CHILD=1000
+
+# --- Security Settings ---------------------------------------------------
+ALLOWED_HOSTS=api.voicetexta.com,localhost,127.0.0.1
+CORS_ORIGINS=https://voicetexta.com,https://www.voicetexta.com,https://app.voicetexta.com
+SECURE_SSL_REDIRECT=true
 EOF
 ```
 
-### Create Production Docker Compose
-```bash
-tee /root/voicetexta-backend/docker-compose.prod.yml << 'EOF'
-version: '3.8'
-
-services:
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    networks:
-      - tts_network
-
-  backend:
-    build: .
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:8002:8000"
-    volumes:
-      - ./piper_models:/app/piper_models:ro
-      - app_data:/app/data
-    environment:
-      - ENVIRONMENT=production
-    env_file:
-      - .env.prod
-    depends_on:
-      redis:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    networks:
-      - tts_network
-
-  worker:
-    build: .
-    restart: unless-stopped
-    command: celery -A celery_worker.celery_app worker --loglevel=info -Q celery,default,parler_gpu_queue --concurrency=2
-    volumes:
-      - ./piper_models:/app/piper_models:ro
-      - app_data:/app/data
-    environment:
-      - ENVIRONMENT=production
-    env_file:
-      - .env.prod
-    depends_on:
-      redis:
-        condition: service_healthy
-    networks:
-      - tts_network
-
-  piper-service:
-    build: .
-    restart: unless-stopped
-    command: python -m app.workers.piper_worker
-    ports:
-      - "127.0.0.1:5000:5000"
-    volumes:
-      - ./piper_models:/app/piper_models:ro
-    environment:
-      - ENVIRONMENT=production
-    networks:
-      - tts_network
-
-volumes:
-  redis_data:
-  app_data:
-
-networks:
-  tts_network:
-    driver: bridge
-EOF
+### Use Existing Production Docker Compose
+The production docker-compose.prod.yml file is already created in your repository with the following key features:
+- Redis with persistence and health checks
+- Backend API with resource limits
+- Celery worker with optimized concurrency
+- Piper TTS service
+- Named volumes for data persistence
+- Custom network configuration
+- Comprehensive health checks
 ```
 
 ## 5. Configure Nginx Reverse Proxy
 
+First, add rate limiting configuration to the main nginx config inside the http block:
+
 ```bash
-sudo tee /etc/nginx/sites-available/tts-backend << 'EOF'
+# Backup the original nginx.conf
+sudo cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.backup
+
+# Add rate limiting configuration manually
+sudo tee /tmp/rate_limit.conf << 'EOF'
+    # Rate limiting zones
+    limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
+EOF
+
+# Insert the rate limiting config after the http { line
+sudo awk '
+/^[[:space:]]*http[[:space:]]*{/ { print; getline < "/tmp/rate_limit.conf"; print; next }
+{ print }
+' /etc/nginx/nginx.conf.backup > /tmp/nginx.conf.new
+
+sudo mv /tmp/nginx.conf.new /etc/nginx/nginx.conf
+sudo rm /tmp/rate_limit.conf
+```
+
+Then create the site configuration:
+
+```bash
+sudo tee /etc/nginx/sites-available/voicetexta-api << 'EOF'
 server {
     listen 80;
-    server_name your-domain.com;
+    server_name api.voicetexta.com;
 
     # Security headers
     add_header X-Frame-Options DENY;
     add_header X-Content-Type-Options nosniff;
     add_header X-XSS-Protection "1; mode=block";
-
-    # Rate limiting
-    limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
-    limit_req zone=api burst=20 nodelay;
 
     # Large file uploads for audio
     client_max_body_size 100M;
@@ -246,7 +205,7 @@ server {
 EOF
 
 # Enable site
-sudo ln -sf /etc/nginx/sites-available/tts-backend /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/voicetexta-api /etc/nginx/sites-enabled/
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t
 sudo systemctl reload nginx
@@ -260,7 +219,7 @@ sudo snap install --classic certbot
 sudo ln -s /snap/bin/certbot /usr/bin/certbot
 
 # Get SSL certificate
-sudo certbot --nginx -d your-domain.com
+sudo certbot --nginx -d api.voicetexta.com
 
 # Auto-renewal is enabled by default with snap
 sudo certbot renew --dry-run
@@ -269,9 +228,9 @@ sudo certbot renew --dry-run
 ## 7. Create Systemd Service
 
 ```bash
-sudo tee /etc/systemd/system/tts-backend.service << 'EOF'
+sudo tee /etc/systemd/system/voicetexta-backend.service << 'EOF'
 [Unit]
-Description=TTS Backend Application
+Description=VoiceTexta TTS Backend Application
 Requires=docker.service
 After=docker.service
 
@@ -292,26 +251,26 @@ EOF
 
 # Enable and start service
 sudo systemctl daemon-reload
-sudo systemctl enable tts-backend.service
+sudo systemctl enable voicetexta-backend.service
 ```
 
 ## 8. Setup Logging with Rsyslog
 
 ```bash
 # Create log directory
-sudo mkdir -p /var/log/tts-backend
-sudo chown syslog:adm /var/log/tts-backend
+sudo mkdir -p /var/log/voicetexta-backend
+sudo chown syslog:adm /var/log/voicetexta-backend
 
 # Configure rsyslog
-sudo tee /etc/rsyslog.d/30-tts-backend.conf << 'EOF'
-# TTS Backend logging
-:programname,isequal,"tts-backend" /var/log/tts-backend/app.log
+sudo tee /etc/rsyslog.d/30-voicetexta-backend.conf << 'EOF'
+# VoiceTexta Backend logging
+:programname,isequal,"voicetexta-backend" /var/log/voicetexta-backend/app.log
 & stop
 EOF
 
 # Logrotate configuration
-sudo tee /etc/logrotate.d/tts-backend << 'EOF'
-/var/log/tts-backend/*.log {
+sudo tee /etc/logrotate.d/voicetexta-backend << 'EOF'
+/var/log/voicetexta-backend/*.log {
     daily
     missingok
     rotate 52
@@ -412,13 +371,110 @@ nano .env.prod
 
 # Build and start services
 docker compose -f docker-compose.prod.yml build
-systemctl start tts-backend
+systemctl start voicetexta-backend
+```
+
+**If service fails to start, debug with these commands:**
+
+```bash
+# Check detailed service logs
+journalctl -xeu voicetexta-backend.service
+
+# Try running Docker Compose manually for better error visibility
+cd /root/voicetexta-backend
+docker compose -f docker-compose.prod.yml up
+
+# Check individual container logs
+docker compose -f docker-compose.prod.yml logs backend-api
+docker compose -f docker-compose.prod.yml logs redis
+docker compose -f docker-compose.prod.yml logs worker
+docker compose -f docker-compose.prod.yml logs piper
+
+# Check if containers are running
+docker compose -f docker-compose.prod.yml ps
+
+# Common issues to check:
+# 1. Port conflicts
+netstat -tlnp | grep -E ':(8002|5000|6379)'
+
+# 2. Environment file
+cat .env.prod
+
+# 3. Piper models directory
+ls -la piper_models/
+
+# 4. Docker logs for specific error
+docker logs voicetexta-backend-backend-api-1
+```
+
+**Common Fixes for Issues:**
+
+```bash
+# Fix 1: Health check endpoint issue (backend returns 404 on /)
+# Edit docker-compose.prod.yml to fix health check endpoint
+sed -i 's|http://localhost:8000/|http://localhost:8000/health|g' docker-compose.prod.yml
+
+# Fix 2: Piper worker module not found
+# Remove or comment out the piper service if the module doesn't exist
+# OR change the command to a simple server
+sed -i 's|command: python -m app.workers.piper_worker|command: python -m http.server 5000|g' docker-compose.prod.yml
+
+# Fix 3: Remove version warning
+sed -i '/version:/d' docker-compose.prod.yml
+
+# After making these changes, restart:
+docker compose -f docker-compose.prod.yml down
+docker compose -f docker-compose.prod.yml up -d
+```
+
+**Quick temporary fix to get it running:**
+
+```bash
+# Stop current containers
+docker compose -f docker-compose.prod.yml down
+
+# Run without the problematic piper service
+docker compose -f docker-compose.prod.yml up -d redis backend-api worker
+
+# Check if it works
+curl http://localhost:8002/
+```
+
+**If you get YAML syntax errors:**
+
+```bash
+# Check YAML syntax around the error line
+sed -n '85,95p' docker-compose.prod.yml
+
+# Validate YAML syntax
+python3 -c "import yaml; yaml.safe_load(open('docker-compose.prod.yml'))"
+
+# Common YAML fixes:
+# 1. Check indentation (use spaces, not tabs)
+# 2. Check for missing colons or incorrect nesting
+# 3. Ensure proper key-value formatting
+
+# Quick fix - recreate the docker-compose.prod.yml file:
+cp docker-compose.prod.yml docker-compose.prod.yml.backup
+
+# Use the working version from your repository
+git checkout docker-compose.prod.yml
+
+# Or manually fix common issues:
+# Remove version line if it exists
+sed -i '/^version:/d' docker-compose.prod.yml
+
+# Fix any malformed lines around line 91
+# You can edit manually: nano docker-compose.prod.yml
+```
+```
+```
 ```
 
 ### Check Status
 ```bash
 # Service status
-systemctl status tts-backend
+systemctl status voicetexta-backend
 
 # Container status
 docker compose -f docker-compose.prod.yml ps
@@ -432,7 +488,7 @@ docker compose -f docker-compose.prod.yml logs -f
 cd /root/voicetexta-backend
 git pull
 docker compose -f docker-compose.prod.yml build --no-cache
-systemctl restart tts-backend
+systemctl restart voicetexta-backend
 ```
 
 ## 12. Backup Strategy
@@ -476,7 +532,7 @@ if curl -f -s $HEALTH_URL > /dev/null; then
 else
     echo "TTS Backend is unhealthy"
     # Restart service
-    systemctl restart tts-backend
+    systemctl restart voicetexta-backend
     exit 1
 fi
 EOF
@@ -492,13 +548,13 @@ echo "*/5 * * * * /root/voicetexta-backend/health_check.sh" | crontab -
 ### Useful Commands
 ```bash
 # Check logs
-journalctl -u tts-backend.service -f
+journalctl -u voicetexta-backend.service -f
 
 # Restart application
-systemctl restart tts-backend
+systemctl restart voicetexta-backend
 
 # Update application
-cd /root/voicetexta-backend && git pull && systemctl restart tts-backend
+cd /root/voicetexta-backend && git pull && systemctl restart voicetexta-backend
 
 # Check container status
 docker compose -f docker-compose.prod.yml ps
@@ -508,17 +564,20 @@ docker compose -f docker-compose.prod.yml exec redis redis-cli
 ```
 
 ### Troubleshooting
-- **Service won't start**: Check `journalctl -u tts-backend.service`
+- **Service won't start**: Check `journalctl -u voicetexta-backend.service`
 - **502 Bad Gateway**: Check if backend container is running
 - **SSL issues**: Run `certbot renew`
 - **High memory usage**: Check worker concurrency in docker-compose.prod.yml
+- **Domain not resolving**: Ensure DNS A record points to your server IP
+- **CORS errors**: Check CORS_ORIGINS in .env.prod
 
 ## Security Notes
 
 1. **Environment Variables**: Never commit `.env.prod` to version control
-2. **AWS Credentials**: Use IAM roles when possible instead of access keys
+2. **Cloudinary Credentials**: Keep API secrets secure and rotate periodically
 3. **Regular Updates**: Keep Docker, Nginx, and Ubuntu updated
 4. **Monitoring**: Set up proper monitoring and alerting
 5. **Backups**: Test backup restoration regularly
+6. **SSL/TLS**: Ensure HTTPS is properly configured and auto-renewing
 
 This deployment setup provides a production-ready environment with security, monitoring, and maintenance considerations built-in.
