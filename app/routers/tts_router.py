@@ -133,26 +133,39 @@ async def get_audio(filename: str):
 
 @router.post("/jobs", response_model=schemas.JobOut)
 def create_job(job_in: schemas.JobCreate, current_user=Depends(get_current_user)):
-    # create job in DynamoDB. `current_user.id` may be a Cognito `sub` string.
-    job = create_job_item(current_user.id if hasattr(current_user, "id") else None, job_in.dict())
+    # Generate a unique job ID
+    job_id = str(uuid.uuid4())
+    user_id = str(current_user.id) if hasattr(current_user, "id") else "anonymous"
+    
+    # Create job in simple storage
+    job_data = job_in.dict()
+    job = create_job_item(
+        job_id=job_id,
+        user_id=user_id,
+        text=job_data.get("text", ""),
+        voice_id=job_data.get("voice_id", ""),
+        status="queued"
+    )
+    
     # enqueue celery task to process job (import locally to avoid circular/import issues)
     try:
         import celery_worker
-        celery_worker.process_job.delay(int(job["id"]))
+        celery_worker.process_job.delay(job_id)
     except Exception:
         pass
+    
     # convert to JobOut-compatible dict
     return {
-        "id": int(job["id"]),
+        "id": job["job_id"],
         "status": job.get("status", "queued"),
         "created_at": job.get("created_at"),
-        "audio_url": job.get("audio_s3_url") or job.get("s3_final_url")
+        "audio_url": job.get("audio_url")
     }
 
 
 @router.get("/jobs/{job_id}")
 @router.get("/jobs/{job_id}", response_model=schemas.JobOut)
-def get_job(job_id: int, current_user=Depends(get_current_user)):
+def get_job(job_id: str, current_user=Depends(get_current_user)):
     job = get_job_item(job_id)
     # job['user_id'] may be numeric (legacy) or a Cognito sub string. Compare
     # by string representation if present.
@@ -163,11 +176,11 @@ def get_job(job_id: int, current_user=Depends(get_current_user)):
 
     # Return job info with proxy URL for audio streaming
     audio_url = None
-    if job.get("status") == "completed" and job.get("audio_s3_key"):
-        audio_url = f"/tts/jobs/{job_id}/audio"
+    if job.get("status") == "completed" and job.get("audio_url"):
+        audio_url = job.get("audio_url")
     
     return {
-        "id": int(job["id"]),
+        "id": job["job_id"],
         "status": job.get("status", "unknown"),
         "created_at": job.get("created_at"),
         "audio_url": audio_url
@@ -175,7 +188,7 @@ def get_job(job_id: int, current_user=Depends(get_current_user)):
 
 
 @router.get("/jobs/{job_id}/audio")
-async def stream_job_audio(job_id: int, current_user=Depends(get_current_user)):
+async def stream_job_audio(job_id: str, current_user=Depends(get_current_user)):
     """Stream audio file for a job. Acts as a proxy to handle S3 authentication."""
     job = get_job_item(job_id)
     job_user = job.get("user_id") if job else None
