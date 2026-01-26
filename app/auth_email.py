@@ -20,10 +20,7 @@ from .models import User, VerificationCode
 pwd_context = CryptContext(
     schemes=["bcrypt"],
     deprecated="auto",
-    bcrypt__default_rounds=12,
-    bcrypt__min_rounds=4,
-    bcrypt__max_rounds=31,
-    truncate_error=True  # This prevents the error by allowing truncation
+    bcrypt__default_rounds=12
 )
 
 # JWT configuration
