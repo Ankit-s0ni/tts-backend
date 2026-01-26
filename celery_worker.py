@@ -33,7 +33,7 @@ celery_app.conf.beat_schedule = {
 }
 
 
-def _ensure_dirs(job_id: int):
+def _ensure_dirs(job_id):
     # Use current working directory as base so running the worker from
     # the `backend` folder doesn't create a nested backend/backend path.
     base = os.getcwd()
@@ -115,7 +115,7 @@ def _merge_wavs(wav_paths: List[str], out_path: str) -> None:
 
 
 @celery_app.task(name="backend.process_job")
-def process_job(job_id: int):
+def process_job(job_id):
     """Process a queued job: chunk text, call Piper per chunk, save chunk wavs,
     merge them, and update DB status.
     """
@@ -218,7 +218,7 @@ def process_job(job_id: int):
             update_job_item(job_id, {"status": "failed", "updated_at": datetime.utcnow().isoformat()})
             return {"job_id": job_id, "status": "no_audio"}
 
-        out_path = os.path.join(out_dir, f"job_{job_id}.wav")
+        out_path = os.path.join(out_dir, f"job_{str(job_id)}.wav")
         _merge_wavs(wav_paths, out_path)
 
         # update job record (local DB / cache)
