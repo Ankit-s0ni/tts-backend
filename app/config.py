@@ -1,14 +1,6 @@
-"""Config that is compatible with pydantic v1 and v2 environments.
-
-We avoid importing newer-only symbols to keep the code runnable regardless of
-the host pydantic version. PIPER_URL is stored as a string.
-"""
-try:
-    # pydantic v1
-    from pydantic import BaseSettings
-except Exception:
-    # pydantic v2 separates settings into pydantic-settings
-    from pydantic_settings import BaseSettings  # type: ignore
+"""Config using Pydantic v2 settings."""
+from pydantic_settings import BaseSettings
+from pydantic import Field
 
 
 class Settings(BaseSettings):
@@ -16,14 +8,20 @@ class Settings(BaseSettings):
     PIPER_URL: str = "http://piper-service:5000/"  # Keep for /tts/sync endpoint (backward compat)
     MODELS_DIR: str = "/models"  # Base directory for ONNX model files
     MAX_CACHED_VOICES: int = 5  # Maximum voices to keep in VoiceManager cache
-    # placeholders for future config
+    
+    # MongoDB settings
+    MONGODB_URI: str = "mongodb+srv://voicetexta:voicetexta@cluster0.dvq4rui.mongodb.net/?appName=Cluster0"
+    MONGODB_DB_NAME: str = "tts_production"
+    
+    # Legacy AWS settings (kept for backward compatibility)
     S3_ENDPOINT: str = ""
     S3_BUCKET: str = ""
     AWS_REGION: str = "ap-south-1"
     DYNAMODB_TABLE_TEMP_AUDIO: str = "tts_temp_audio"
 
-    class Config:
-        env_file = ".env"
+    model_config = {
+        "env_file": ".env"
+    }
 
 
 settings = Settings()

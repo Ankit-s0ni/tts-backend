@@ -6,7 +6,7 @@ from pycognito.exceptions import SoftwareTokenMFAChallengeException, SMSMFAChall
 import os
 from ..auth import get_current_user
 from .. import schemas
-from ..utils.dynamo_user import get_user, create_or_update_user
+from ..utils.mongo_user import get_user, create_or_update_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 # Public router for top-level endpoints (not under /auth prefix)

@@ -1,4 +1,5 @@
-from .dynamo import get_voice, put_voice, list_voices, _ensure_tables
+from .mongo_db import get_voice, put_voice, list_voices
+from .mongodb import init_mongodb
 
 # Expanded voice catalog including Piper and Parler entries.
 # This is a representative catalog — add or refine model_path values
@@ -56,10 +57,10 @@ DEFAULT_VOICES = [
 
 
 def seed_default_voices():
-    """Ensure default voice records exist in DynamoDB. Idempotent."""
-    # make sure tables exist
+    """Ensure default voice records exist in MongoDB. Idempotent."""
+    # make sure MongoDB is initialized
     try:
-        _ensure_tables()
+        init_mongodb()
     except Exception:
         pass
 

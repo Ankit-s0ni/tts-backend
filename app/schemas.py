@@ -33,8 +33,9 @@ class JobOut(BaseModel):
     created_at: str  # Changed to str for ISO format datetime
     audio_url: str | None = None
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }
 
 
 from typing import Optional

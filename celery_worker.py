@@ -8,7 +8,7 @@ import traceback
 import logging
 from datetime import datetime
 from celery.schedules import crontab
-from app.dynamo_simple import get_job_item, update_job_item
+from app.mongo_db import get_job_item, update_job_item
 from app.voice_catalog import get_voice
 from app.config import settings
 from app.utils.chunker import chunk_text

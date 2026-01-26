@@ -54,9 +54,10 @@ def update_job_item(job_id: str, **updates) -> Optional[dict]:
     return _JOBS_STORE[job_id]
 
 
-def get_user_jobs(user_id: str = "anonymous") -> List[dict]:
+def get_user_jobs(user_id: str = "anonymous", limit: int = 50) -> List[dict]:
     """Get all jobs for a user."""
-    return [job for job in _JOBS_STORE.values() if job.get("user_id") == user_id]
+    jobs = [job for job in _JOBS_STORE.values() if job.get("user_id") == user_id]
+    return jobs[:limit] if limit else jobs
 
 
 def list_all_jobs() -> List[dict]:

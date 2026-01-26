@@ -13,7 +13,7 @@ from __future__ import annotations
 import os
 from typing import Iterable
 
-from ..dynamo import list_voices, get_voice, put_voice
+from ..mongo_db import list_voices, get_voice, put_voice
 
 
 def _candidate_paths() -> Iterable[str]:
@@ -104,7 +104,7 @@ if __name__ == "__main__":
 import os
 from typing import List
 
-from ..dynamo import list_voices, get_voice, put_voice
+from ..mongo_db import list_voices, get_voice, put_voice
 
 
 def _find_models(root_paths: List[str]) -> dict:

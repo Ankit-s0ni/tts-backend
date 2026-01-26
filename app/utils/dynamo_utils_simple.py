@@ -3,7 +3,7 @@
 This module provides simple utilities for job updates without AWS dependencies.
 """
 from datetime import datetime
-from ..dynamo_simple import update_job_item
+from ..mongo_db import update_job_item
 
 
 def update_job_s3(job_id: str, s3_key: str, s3_url: str):

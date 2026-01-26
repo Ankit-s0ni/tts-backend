@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import Response, JSONResponse
 from .. import schemas
-from ..dynamo_simple import create_job_item, get_job_item, get_user_jobs
+from ..mongo_db import create_job_item, get_job_item, get_user_jobs
 from ..voice_catalog import get_voice
 from ..utils.s3_utils_simple import generate_presigned_url
 import httpx
@@ -249,15 +249,16 @@ def list_user_jobs(current_user=Depends(get_current_user), limit: int = 50):
     result = []
     for job in jobs:
         audio_url = None
+        job_id = job.get("job_id") or job.get("id")
         
         # Use proxy endpoint for completed jobs instead of direct S3 URLs
         # Check for audio_s3_key OR s3_final_url (both are used in different parts of the code)
         if job.get("status") == "completed" and (job.get("audio_s3_key") or job.get("s3_final_url")):
             # Use backend proxy endpoint which will stream from S3
-            audio_url = f"/tts/jobs/{job['id']}/audio"
+            audio_url = f"/tts/jobs/{job_id}/audio"
         
         result.append({
-            "id": int(job["id"]),
+            "id": job_id,
             "status": job.get("status", "unknown"),
             "created_at": job.get("created_at"),
             "audio_url": audio_url,

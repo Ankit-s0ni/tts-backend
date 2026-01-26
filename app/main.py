@@ -10,6 +10,11 @@ from .routers import auth_router_email
 from .db import Base, engine
 # Use a hard-coded voice catalog for dev; do not auto-sync Piper models.
 from .voice_catalog import list_voices as _list_voices  # imported to ensure module available
+# Import MongoDB initialization
+from .mongodb import init_mongodb, close_mongodb_connections
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 app = FastAPI(title="TTS App - Backend")
@@ -31,8 +36,23 @@ app.include_router(tts_router.router)
 def startup_event():
     # create DB tables for dev (SQLite)
     Base.metadata.create_all(bind=engine)
+    
+    # Initialize MongoDB connection and indexes
+    try:
+        init_mongodb()
+        logger.info("MongoDB initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize MongoDB: {e}")
+        # Continue startup even if MongoDB fails (will retry on first use)
+    
     # Do NOT seed or sync Piper models/voices during startup for this mode.
     # Voices are provided by the hard-coded `voice_catalog` module.
+
+
+@app.on_event("shutdown")
+def shutdown_event():
+    # Close MongoDB connections
+    close_mongodb_connections()
 
 
 @app.get("/health")

@@ -1,7 +1,8 @@
-fastapi==0.95.2
-uvicorn[standard]==0.22.0
-httpx==0.24.1
-pydantic==1.10.10
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+httpx>=0.25.0
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
 python-dotenv==1.0.0
 SQLAlchemy==1.4.49
 alembic==1.11.1
@@ -12,11 +13,14 @@ python-multipart==0.0.6
 celery==5.3.1
 boto3==1.28.76
 requests==2.31.0
-email-validator==1.2.0
+email-validator>=2.0.0
 redis>=4.6.0
-piper-tts>=1.2.0
+# piper-tts>=1.2.0  # Optional - platform specific, install manually if needed
 numpy>=1.20.0
 # Email service (Resend)
 resend>=0.7.0
 # Cloudinary for file uploads
 cloudinary>=1.36.0
+# MongoDB
+pymongo>=4.6.0
+motor>=3.3.0
