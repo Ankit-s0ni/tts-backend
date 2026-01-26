@@ -4,7 +4,7 @@ Handles registration, login, email verification, and password reset.
 """
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, validator
 from datetime import timedelta
 
 from ..db import get_db
@@ -37,7 +37,7 @@ class RegisterRequest(BaseModel):
     password: str
     full_name: str | None = None
     
-    @field_validator('password')
+    @validator('password')
     @classmethod
     def validate_password_length(cls, v: str) -> str:
         """Validate password length for bcrypt compatibility."""
@@ -72,7 +72,7 @@ class ResetPasswordRequest(BaseModel):
     code: str
     new_password: str
     
-    @field_validator('new_password')
+    @validator('new_password')
     @classmethod
     def validate_password_length(cls, v: str) -> str:
         """Validate password length for bcrypt compatibility."""
