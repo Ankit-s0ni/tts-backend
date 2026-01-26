@@ -28,9 +28,10 @@ class JobCreate(BaseModel):
 
 
 class JobOut(BaseModel):
-    id: int
+    id: str  # Changed to str to support UUID job IDs
     status: str
-    created_at: datetime
+    created_at: str  # Changed to str for ISO format datetime
+    audio_url: str | None = None
 
     class Config:
         orm_mode = True
