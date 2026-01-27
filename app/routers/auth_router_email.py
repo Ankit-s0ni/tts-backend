@@ -357,6 +357,71 @@ def me(current_user: EmailUser = Depends(get_current_user)):
     }
 
 
+@router.put("/me")
+def update_profile(
+    payload: dict,
+    current_user: EmailUser = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Update current user profile (full_name, etc).
+    """
+    user = db.query(User).filter(User.id == current_user.id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Update allowed fields
+    if "full_name" in payload and payload["full_name"]:
+        user.full_name = payload["full_name"]
+    
+    db.commit()
+    db.refresh(user)
+    
+    return {
+        "id": int(user.id),
+        "email": user.email,
+        "full_name": user.full_name,
+        "is_verified": user.is_verified,
+        "is_active": user.is_active
+    }
+
+
+@router.post("/link-profile")
+def link_profile(
+    payload: dict,
+    current_user: EmailUser = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Update user profile (alias for PUT /auth/me for backward compatibility).
+    Accepts: full_name, phone, age, profile_image
+    """
+    user = db.query(User).filter(User.id == current_user.id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Update allowed fields
+    if "full_name" in payload and payload["full_name"]:
+        user.full_name = payload["full_name"]
+    
+    db.commit()
+    db.refresh(user)
+    
+    return {
+        "id": int(user.id),
+        "email": user.email,
+        "full_name": user.full_name,
+        "is_verified": user.is_verified,
+        "is_active": user.is_active
+    }
+
+
 @public_router.get("/users/me/profile", response_model=UserResponse)
 def get_my_profile(current_user: EmailUser = Depends(get_current_verified_user)):
     """
