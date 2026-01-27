@@ -13,7 +13,8 @@ class Settings(BaseSettings):
     MONGODB_URI: str = "mongodb+srv://voicetexta:voicetexta@cluster0.dvq4rui.mongodb.net/?appName=Cluster0"
     MONGODB_DB_NAME: str = "tts_production"
     
-    # Cloudinary settings (for file storage)
+    # Cloudinary settings (for file storage) - use CLOUDINARY_URL or individual credentials
+    CLOUDINARY_URL: str = ""
     CLOUDINARY_CLOUD_NAME: str = ""
     CLOUDINARY_API_KEY: str = ""
     CLOUDINARY_API_SECRET: str = ""

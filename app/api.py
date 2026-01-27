@@ -16,7 +16,10 @@ from .voice_manager import get_voice_manager
 router = APIRouter()
 
 # Configure Cloudinary at module level if credentials are available
-if settings.CLOUDINARY_CLOUD_NAME:
+if settings.CLOUDINARY_URL:
+    # CLOUDINARY_URL is in format: cloudinary://api_key:api_secret@cloud_name
+    cloudinary.config(cloudinary_url=settings.CLOUDINARY_URL)
+elif settings.CLOUDINARY_CLOUD_NAME:
     cloudinary.config(
         cloud_name=settings.CLOUDINARY_CLOUD_NAME,
         api_key=settings.CLOUDINARY_API_KEY,
@@ -127,7 +130,7 @@ async def _tts_sync_piper(text: str, voice_id: str, voice_meta: dict):
         # Upload to Cloudinary
         audio_url = None
         try:
-            if settings.CLOUDINARY_CLOUD_NAME and settings.CLOUDINARY_CLOUD_NAME.strip():
+            if settings.CLOUDINARY_URL or settings.CLOUDINARY_CLOUD_NAME:
                 print(f"DEBUG: Uploading to Cloudinary...")
                 # Create a unique public_id
                 public_id = f"tts/{voice_id}/{uuid.uuid4().hex[:12]}"
