@@ -15,13 +15,25 @@ from app.utils.chunker import chunk_text
 from app.voice_manager import get_voice_manager
 from typing import List
 import io
-from app.utils.s3_utils_simple import upload_audio
-from app.utils.dynamo_utils_simple import update_job_s3
+import uuid
+import cloudinary
+import cloudinary.uploader
 
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 
 celery_app = Celery("backend_tasks", broker=REDIS_URL, backend=REDIS_URL)
+
+# Configure Cloudinary at module level if credentials are available
+if settings.CLOUDINARY_URL:
+    # CLOUDINARY_URL is in format: cloudinary://api_key:api_secret@cloud_name
+    cloudinary.config(cloudinary_url=settings.CLOUDINARY_URL)
+elif settings.CLOUDINARY_CLOUD_NAME:
+    cloudinary.config(
+        cloud_name=settings.CLOUDINARY_CLOUD_NAME,
+        api_key=settings.CLOUDINARY_API_KEY,
+        api_secret=settings.CLOUDINARY_API_SECRET
+    )
 
 # Configure Celery Beat schedule for periodic tasks
 celery_app.conf.beat_schedule = {
@@ -127,11 +139,11 @@ def process_job(job_id):
             return {"job_id": job_id, "status": "not_found"}
 
         # set processing
-        update_job_item(job_id, {"status": "processing", "updated_at": datetime.utcnow().isoformat()})
+        update_job_item(job_id, status="processing")
 
         text = job.get("text", "") or ""
         if not text:
-            update_job_item(job_id, {"status": "failed", "updated_at": datetime.utcnow().isoformat()})
+            update_job_item(job_id, status="failed")
             return {"job_id": job_id, "status": "no_text"}
 
         tmp_dir, out_dir = _ensure_dirs(job_id)
@@ -151,7 +163,7 @@ def process_job(job_id):
 
         # Record total chunks for progress tracking
         try:
-            update_job_item(job_id, {"total_chunks": len(chunks)})
+            update_job_item(job_id, total_chunks=len(chunks))
         except Exception:
             pass
         wav_paths: List[str] = []
@@ -164,14 +176,14 @@ def process_job(job_id):
             logger.info(f"Loading voice model: {model_path}")
         else:
             logger.info("No explicit model_path provided for this job; cannot synthesize.")
-            update_job_item(job_id, {"status": "failed", "updated_at": datetime.utcnow().isoformat()})
+            update_job_item(job_id, status="failed")
             return {"job_id": job_id, "status": "no_model"}
 
         # Load voice once (cached for subsequent chunks)
         voice = voice_manager.get_voice(model_path)
         if not voice:
             logger.error(f"Failed to load voice model: {model_path}")
-            update_job_item(job_id, {"status": "failed", "updated_at": datetime.utcnow().isoformat()})
+            update_job_item(job_id, status="failed")
             return {"job_id": job_id, "status": "voice_load_failed"}
 
         logger.info(f"Voice loaded successfully. Processing {len(chunks)} chunks...")
@@ -215,36 +227,39 @@ def process_job(job_id):
                 continue
 
         if not wav_paths:
-            update_job_item(job_id, {"status": "failed", "updated_at": datetime.utcnow().isoformat()})
+            update_job_item(job_id, status="failed")
             return {"job_id": job_id, "status": "no_audio"}
 
         out_path = os.path.join(out_dir, f"job_{str(job_id)}.wav")
         _merge_wavs(wav_paths, out_path)
 
         # update job record (local DB / cache)
-        update_job_item(job_id, {
-            "s3_final_url": out_path,
-            "status": "completed",
-            "completed_chunks": len(wav_paths),
-            "updated_at": datetime.utcnow().isoformat(),
-        })
+        update_job_item(job_id, s3_final_url=out_path, status="completed", completed_chunks=len(wav_paths))
 
-        # Upload final audio to S3 and update DynamoDB record
+        # Upload final audio to Cloudinary
         try:
-            user_id = job.get("user_id") or job.get("owner") or "unknown"
-            s3_key, s3_url = upload_audio(out_path, str(user_id), str(job_id))
-            # update the DynamoDB record with S3 metadata
-            try:
-                update_job_s3(job_id, s3_key, s3_url)
-            except Exception:
-                logger.exception("Failed to update DynamoDB with S3 info")
-            # also update local DB with S3 info for parity
-            try:
-                update_job_item(job_id, {"audio_s3_key": s3_key, "audio_s3_url": s3_url})
-            except Exception:
-                logger.exception("Failed to update local DB with S3 info")
-        except Exception:
-            logger.exception("Failed to upload audio to S3")
+            logger.info(f"Uploading to Cloudinary for job {job_id}")
+            # Create a unique public_id
+            voice_id = job.get("voice_id", "unknown")
+            public_id = f"tts/{voice_id}/{uuid.uuid4().hex[:12]}"
+            
+            # Upload the WAV file to Cloudinary
+            result = cloudinary.uploader.upload(
+                out_path,
+                resource_type="video",
+                public_id=public_id,
+                overwrite=False
+            )
+            
+            audio_url = result.get("secure_url")
+            if audio_url:
+                logger.info(f"✅ Successfully uploaded to Cloudinary: {audio_url}")
+                # Update job with Cloudinary URL
+                update_job_item(job_id, audio_url=audio_url)
+            else:
+                logger.error(f"Cloudinary upload result: {result}")
+        except Exception as e:
+            logger.exception(f"Failed to upload audio to Cloudinary: {e}")
 
         # cleanup tmp
         try:
@@ -269,7 +284,7 @@ def process_job(job_id):
         try:
             job = get_job_item(job_id)
             if job:
-                update_job_item(job_id, {"status": "failed", "updated_at": datetime.utcnow().isoformat()})
+                update_job_item(job_id, status="failed")
         except Exception:
             logger.exception("Failed to update job status on exception")
 

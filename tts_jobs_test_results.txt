@@ -1,0 +1,138 @@
+﻿
+======================================================================
+TTS JOBS API TEST SUITE
+======================================================================
+Base URL: http://127.0.0.1:8002
+Timeout:  20s
+
+
+PHASE 0: AUTHENTICATION
+
+Attempting to register: test_user_1769633810@example.com
+
+======================================================================
+TEST: Register User
+URL:  http://127.0.0.1:8002/auth/register
+DATA: {
+  "email": "test_user_1769633810@example.com",
+  "password": "TestPass123!@"
+}
+======================================================================
+STATUS: 201
+RESPONSE:
+{
+  "message": "Registration successful. Please check your email for verification code.",
+  "email": "test_user_1769633810@example.com",
+  "user_id": 6
+}
+Registration successful
+
+Attempting to login: test_user_1769633810@example.com
+
+======================================================================
+TEST: Login User
+URL:  http://127.0.0.1:8002/auth/login
+DATA: {
+  "email": "test_user_1769633810@example.com",
+  "password": "TestPass123!@"
+}
+======================================================================
+STATUS: 200
+RESPONSE:
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2IiwiZXhwIjoxNzcwMjM4NjExfQ.Y-yU9jTck7ase7mStkqm-FiiE5cMxDVqa-rlefoaa5w",
+  "token_type": "bearer"
+}
+Login successful - got token
+
+Using token for subsequent requests
+
+
+PHASE 1: CREATE TTS JOB
+
+======================================================================
+TEST: Create TTS Job
+URL:  http://127.0.0.1:8002/tts/jobs
+HEADERS: {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2IiwiZXhwIjoxNzcwMjM4NjExfQ.Y-yU9jTck7ase7mStkqm-FiiE5cMxDVqa-rlefoaa5w'}
+DATA: {
+  "text": "This is a test message to synthesize. The quick brown fox jumps over the lazy dog.",
+  "voice_id": "en_US-lessac-high",
+  "language": "en_US"
+}
+======================================================================
+STATUS: 200
+RESPONSE:
+{
+  "id": "84c2d751-bf52-4783-a230-b79e0b78a51e",
+  "status": "queued",
+  "created_at": "2026-01-28T20:56:51.503347",
+  "audio_url": null
+}
+
+Job created successfully with ID: 84c2d751-bf52-4783-a230-b79e0b78a51e
+
+
+PHASE 2: LIST ALL JOBS
+
+======================================================================
+TEST: List TTS Jobs
+URL:  http://127.0.0.1:8002/tts/jobs?limit=10
+HEADERS: {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2IiwiZXhwIjoxNzcwMjM4NjExfQ.Y-yU9jTck7ase7mStkqm-FiiE5cMxDVqa-rlefoaa5w'}
+======================================================================
+STATUS: 200
+RESPONSE:
+[
+  {
+    "id": "84c2d751-bf52-4783-a230-b79e0b78a51e",
+    "status": "queued",
+    "created_at": "2026-01-28T20:56:51.503347",
+    "audio_url": null,
+    "text": "This is a test message to synthesize. The quick brown fox jumps over the lazy dog.",
+    "voice_id": "en_US-lessac-high"
+  }
+]
+
+Retrieved 1 job(s)
+
+
+PHASE 3: GET JOB DETAILS
+
+======================================================================
+TEST: Get Job Details (84c2d751-bf52-4783-a230-b79e0b78a51e)
+URL:  http://127.0.0.1:8002/tts/jobs/84c2d751-bf52-4783-a230-b79e0b78a51e
+HEADERS: {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2IiwiZXhwIjoxNzcwMjM4NjExfQ.Y-yU9jTck7ase7mStkqm-FiiE5cMxDVqa-rlefoaa5w'}
+======================================================================
+STATUS: 200
+RESPONSE:
+{
+  "id": "84c2d751-bf52-4783-a230-b79e0b78a51e",
+  "status": "processing",
+  "created_at": "2026-01-28T20:56:51.503347",
+  "audio_url": null
+}
+
+Job status: processing
+(Audio not yet ready - job may still be processing)
+
+
+PHASE 4: ERROR HANDLING - Invalid Job ID
+
+======================================================================
+TEST: Get Non-existent Job (should return 404)
+URL:  http://127.0.0.1:8002/tts/jobs/invalid-job-id-12345
+HEADERS: {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2IiwiZXhwIjoxNzcwMjM4NjExfQ.Y-yU9jTck7ase7mStkqm-FiiE5cMxDVqa-rlefoaa5w'}
+======================================================================
+STATUS: 404
+RESPONSE:
+{
+  "detail": "Job not found"
+}
+
+======================================================================
+SUMMARY
+======================================================================
+create_job           PASS
+list_jobs            PASS
+get_job              PASS
+
+Total: 3/3 critical tests passed

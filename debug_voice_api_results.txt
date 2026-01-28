@@ -1,0 +1,96 @@
+﻿======================================================================
+STEP 1: Get available voices from API
+======================================================================
+Total voices available: 45
+
+First 3 voices structure:
+{
+  "id": "ar_JO-kareem-low",
+  "display_name": "Ar Jo - Kareem Low",
+  "language": "ar_JO",
+  "gender": "neutral",
+  "engine": "piper",
+  "model_path": "/models/ar_JO-kareem-low/ar_JO-kareem-low.onnx",
+  "available": true
+}
+{
+  "id": "ar_JO-kareem-medium",
+  "display_name": "Ar Jo - Kareem Medium",
+  "language": "ar_JO",
+  "gender": "neutral",
+  "engine": "piper",
+  "model_path": "/models/ar_JO-kareem-medium/ar_JO-kareem-medium.onnx",
+  "available": true
+}
+{
+  "id": "de_DE-eva_k-x_low",
+  "display_name": "De De - Eva_K X_Low",
+  "language": "de_DE",
+  "gender": "neutral",
+  "engine": "piper",
+  "model_path": "/models/de_DE-eva_k-x_low/de_DE-eva_k-x_low.onnx",
+  "available": true
+}
+
+
+Voice ID examples:
+  - ar_JO-kareem-low (Ar Jo - Kareem Low)
+  - ar_JO-kareem-medium (Ar Jo - Kareem Medium)
+  - de_DE-eva_k-x_low (De De - Eva_K X_Low)
+  - de_DE-karlsson-low (De De - Karlsson Low)
+  - de_DE-kerstin-low (De De - Kerstin Low)
+
+Selected voice ID for testing: ar_JO-kareem-low
+
+======================================================================
+STEP 2: Register and Login
+======================================================================
+Register: 201
+Login: 200
+
+======================================================================
+STEP 3: Test /tts/sync with voice_id parameter
+======================================================================
+Payload: {
+  "text": "Hello, this is a test message",
+  "voice": "ar_JO-kareem-low"
+}
+Status: 200
+Response: {
+  "duration": 2.336,
+  "text": "Hello, this is a test message",
+  "voice_id": "ar_JO-kareem-low",
+  "engine": "piper",
+  "sample_rate": 16000,
+  "status": "success",
+  "audio_url": "https://res.cloudinary.com/dnxatxoij/video/upload/v1769634094/tts/ar_JO-kareem-low/fe111417c48d.wav"
+}
+
+======================================================================
+STEP 4: Test /tts/jobs POST with voice_id parameter
+======================================================================
+Payload: {
+  "text": "This is a longer test message for job synthesis",
+  "voice_id": "ar_JO-kareem-low",
+  "language": "en_US"
+}
+Status: 200
+Response: {
+  "id": "8e7ddb3f-d2ff-4de4-88e6-f3fe595f5439",
+  "status": "queued",
+  "created_at": "2026-01-28T21:01:34.555206",
+  "audio_url": null
+}
+
+Job created: 8e7ddb3f-d2ff-4de4-88e6-f3fe595f5439
+Status: queued
+Audio URL: None
+
+======================================================================
+ANALYSIS
+======================================================================
+1. Voice API returns voice.id field: ar_JO-kareem-low
+2. Flutter sends voice_id parameter to /tts/sync: ar_JO-kareem-low
+3. Flutter sends voice_id parameter to /tts/jobs: ar_JO-kareem-low
+
+If sync/jobs failed, check if the API expects "voice" or "voice_id" param

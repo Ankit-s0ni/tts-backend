@@ -1,0 +1,27 @@
+﻿Registering user...
+Logging in...
+
+Creating TTS job...
+Job created: bac7e682-0995-41dc-8f70-d76c0fd93c38
+
+Monitoring job status (updating every 1 second for 60 seconds)...
+======================================================================
+[ 1s] Status: queued       | Audio URL: NO 
+[ 2s] Status: processing   | Audio URL: NO 
+[ 3s] Status: completed    | Audio URL: YES
+
+Job completed successfully!
+Audio URL: /tts/jobs/bac7e682-0995-41dc-8f70-d76c0fd93c38/audio
+======================================================================
+
+Final job status: completed
+Full job data: {
+  "id": "bac7e682-0995-41dc-8f70-d76c0fd93c38",
+  "status": "completed",
+  "created_at": "2026-01-28T21:04:22.698910",
+  "audio_url": "/tts/jobs/bac7e682-0995-41dc-8f70-d76c0fd93c38/audio"
+}
+
+
+Checking worker status via Flower API...
+Active workers: {}

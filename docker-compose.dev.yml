@@ -53,7 +53,7 @@ services:
       dockerfile: Dockerfile
     volumes:
       - ./piper_models/:/models/
-      - ../scripts/:/srv/piper/scripts/:ro
+      - ./scripts/:/srv/piper/scripts/:ro
     ports:
       - "5002:5000"
     environment:

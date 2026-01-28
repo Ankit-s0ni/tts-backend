@@ -60,6 +60,31 @@ services:
     networks:
       - tts_network
 
+  piper:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    volumes:
+      - ./piper_models:/models/
+    ports:
+      - "127.0.0.1:5003:5000"
+    environment:
+      - MODELS_DIR=/models
+    networks:
+      - tts_network
+
+  flower:
+    image: mher/flower:0.9.7
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5556:5555"
+    command: flower --broker=redis://redis:6379/0 --port=5555
+    depends_on:
+      - redis
+    networks:
+      - tts_network
+
 volumes:
   redis_data:
     driver: local

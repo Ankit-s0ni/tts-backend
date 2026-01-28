@@ -27,6 +27,64 @@ elif settings.CLOUDINARY_CLOUD_NAME:
     )
 
 
+@router.get("/health")
+async def health_check():
+    """
+    Health check endpoint to verify API is running and latest changes are deployed.
+    Returns status of all critical services.
+    """
+    try:
+        # Check Piper TTS availability
+        piper_available = False
+        try:
+            import httpx
+            async with httpx.AsyncClient(timeout=2) as client:
+                resp = await client.get(f"{settings.PIPER_URL}/")
+                piper_available = resp.status_code < 500
+        except:
+            piper_available = False
+        
+        # Check Cloudinary configuration
+        cloudinary_configured = bool(settings.CLOUDINARY_URL or settings.CLOUDINARY_CLOUD_NAME)
+        
+        # Check output directory exists
+        output_dir = Path(__file__).parent.parent / "output"
+        output_dir_exists = output_dir.exists()
+        
+        return {
+            "status": "healthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "version": "2.0",
+            "services": {
+                "api": "running",
+                "piper_tts": "available" if piper_available else "unavailable",
+                "cloudinary": "configured" if cloudinary_configured else "not_configured",
+                "file_storage": "ready" if output_dir_exists else "not_ready"
+            },
+            "features": {
+                "tts_sync": True,
+                "tts_async": True,
+                "voice_list": True,
+                "auth_email": True,
+                "cloudinary_upload": cloudinary_configured,
+                "audio_serving": output_dir_exists
+            },
+            "recent_changes": {
+                "cloudinary_url_support": "✅ CLOUDINARY_URL environment variable support",
+                "auth_link_profile": "✅ POST /auth/link-profile endpoint added",
+                "auth_me_put": "✅ PUT /auth/me endpoint for profile updates",
+                "profile_update": "✅ User profile update (full_name, phone, age, profile_image)",
+                "optional_age": "✅ Age field is optional during registration"
+            }
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
+
 @router.get("/voices")
 async def list_voices_api():
     voices = list_available_voices()

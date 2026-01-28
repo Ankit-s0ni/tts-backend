@@ -1,0 +1,489 @@
+﻿
+============================================================
+LOCAL API TEST SUITE
+============================================================
+Base URL: http://127.0.0.1:8002
+Timeout:  10s
+
+============================================================
+TEST: Health Check
+URL:  http://127.0.0.1:8002/health
+============================================================
+STATUS: 200
+RESPONSE:
+{
+  "status": "healthy",
+  "timestamp": "2026-01-28T20:46:17.801013",
+  "version": "2.0",
+  "services": {
+    "api": "running",
+    "piper_tts": "unavailable",
+    "cloudinary": "configured",
+    "file_storage": "ready"
+  },
+  "features": {
+    "tts_sync": true,
+    "tts_async": true,
+    "voice_list": true,
+    "auth_email": true,
+    "cloudinary_upload": true,
+    "audio_serving": true
+  },
+  "recent_changes": {
+    "cloudinary_url_support": "\u2705 CLOUDINARY_URL environment variable support",
+    "auth_link_profile": "\u2705 POST /auth/link-profile endpoint added",
+    "auth_me_put": "\u2705 PUT /auth/me endpoint for profile updates",
+    "profile_update": "\u2705 User profile update (full_name, phone, age, profile_image)",
+    "optional_age": "\u2705 Age field is optional during registration"
+  }
+}
+
+============================================================
+TEST: API Config
+URL:  http://127.0.0.1:8002/config
+============================================================
+STATUS: 200
+RESPONSE:
+{
+  "PIPER_URL": "http://piper:5000/"
+}
+
+============================================================
+TEST: List Voices
+URL:  http://127.0.0.1:8002/voices/
+============================================================
+STATUS: 200
+RESPONSE:
+[
+  {
+    "id": "ar_JO-kareem-low",
+    "display_name": "Ar Jo - Kareem Low",
+    "language": "ar_JO",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/ar_JO-kareem-low/ar_JO-kareem-low.onnx",
+    "available": true
+  },
+  {
+    "id": "ar_JO-kareem-medium",
+    "display_name": "Ar Jo - Kareem Medium",
+    "language": "ar_JO",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/ar_JO-kareem-medium/ar_JO-kareem-medium.onnx",
+    "available": true
+  },
+  {
+    "id": "de_DE-eva_k-x_low",
+    "display_name": "De De - Eva_K X_Low",
+    "language": "de_DE",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/de_DE-eva_k-x_low/de_DE-eva_k-x_low.onnx",
+    "available": true
+  },
+  {
+    "id": "de_DE-karlsson-low",
+    "display_name": "De De - Karlsson Low",
+    "language": "de_DE",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/de_DE-karlsson-low/de_DE-karlsson-low.onnx",
+    "available": true
+  },
+  {
+    "id": "de_DE-kerstin-low",
+    "display_name": "De De - Kerstin Low",
+    "language": "de_DE",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/de_DE-kerstin-low/de_DE-kerstin-low.onnx",
+    "available": true
+  },
+  {
+    "id": "de_DE-mls-medium",
+    "display_name": "De De - Mls Medium",
+    "language": "de_DE",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/de_DE-mls-medium/de_DE-mls-medium.onnx",
+    "available": true
+  },
+  {
+    "id": "de_DE-thorsten-high",
+    "display_name": "De De - Thorsten High",
+    "language": "de_DE",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/de_DE-thorsten-high/de_DE-thorsten-high.onnx",
+    "available": true
+  },
+  {
+    "id": "de_DE-thorsten_emotional-medium",
+    "display_name": "De De - Thorsten_Emotional Medium",
+    "language": "de_DE",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/de_DE-thorsten_emotional-medium/de_DE-thorsten_emotional-medium.onnx",
+    "available": true
+  },
+  {
+    "id": "en_GB-alan-medium",
+    "display_name": "En Gb - Alan Medium",
+    "language": "en_GB",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/en_GB-alan-medium/en_GB-alan-medium.onnx",
+    "available": true
+  },
+  {
+    "id": "en_GB-alba-medium",
+    "display_name": "En Gb - Alba Medium",
+    "language": "en_GB",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/en_GB-alba-medium/en_GB-alba-medium.onnx",
+    "available": true
+  },
+  {
+    "id": "en_GB-cori-high",
+    "display_name": "En Gb - Cori High",
+    "language": "en_GB",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/en_GB-cori-high/en_GB-cori-high.onnx",
+    "available": true
+  },
+  {
+    "id": "en_GB-jenny_dioco-medium",
+    "display_name": "En Gb - Jenny_Dioco Medium",
+    "language": "en_GB",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/en_GB-jenny_dioco-medium/en_GB-jenny_dioco-medium.onnx",
+    "available": true
+  },
+  {
+    "id": "en_GB-northern_english_male-medium",
+    "display_name": "En Gb - Northern_English_Male Medium",
+    "language": "en_GB",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/en_GB-northern_english_male-medium/en_GB-northern_english_male-medium.onnx",
+    "available": true
+  },
+  {
+    "id": "en_GB-southern_english_female-low",
+    "display_name": "En Gb - Southern_English_Female Low",
+    "language": "en_GB",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/en_GB-southern_english_female-low/en_GB-southern_english_female-low.onnx",
+    "available": true
+  },
+  {
+    "id": "en_US-amy-medium",
+    "display_name": "En Us - Amy Medium",
+    "language": "en_US",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/en_US-amy-medium/en_US-amy-medium.onnx",
+    "available": true
+  },
+  {
+    "id": "en_US-danny-low",
+    "display_name": "En Us - Danny Low",
+    "language": "en_US",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/en_US-danny-low/en_US-danny-low.onnx",
+    "available": true
+  },
+  {
+    "id": "en_US-john-medium",
+    "display_name": "En Us - John Medium",
+    "language": "en_US",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/en_US-john-medium/en_US-john-medium.onnx",
+    "available": true
+  },
+  {
+    "id": "en_US-kristin-medium",
+    "display_name": "En Us - Kristin Medium",
+    "language": "en_US",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/en_US-kristin-medium/en_US-kristin-medium.onnx",
+    "available": true
+  },
+  {
+    "id": "en_US-lessac-high",
+    "display_name": "En Us - Lessac High",
+    "language": "en_US",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/en_US-lessac-high/en_US-lessac-high.onnx",
+    "available": true
+  },
+  {
+    "id": "en_US-ljspeech-medium",
+    "display_name": "En Us - Ljspeech Medium",
+    "language": "en_US",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/en_US-ljspeech-medium/en_US-ljspeech-medium.onnx",
+    "available": true
+  },
+  {
+    "id": "es_AR-daniela-high",
+    "display_name": "Es Ar - Daniela High",
+    "language": "es_AR",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/es_AR-daniela-high/es_AR-daniela-high.onnx",
+    "available": true
+  },
+  {
+    "id": "es_ES-carlfm-x_low",
+    "display_name": "Es Es - Carlfm X_Low",
+    "language": "es_ES",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/es_ES-carlfm-x_low/es_ES-carlfm-x_low.onnx",
+    "available": true
+  },
+  {
+    "id": "es_ES-davefx-medium",
+    "display_name": "Es Es - Davefx Medium",
+    "language": "es_ES",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/es_ES-davefx-medium/es_ES-davefx-medium.onnx",
+    "available": true
+  },
+  {
+    "id": "es_ES-mls_10246-low",
+    "display_name": "Es Es - Mls_10246 Low",
+    "language": "es_ES",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/es_ES-mls_10246-low/es_ES-mls_10246-low.onnx",
+    "available": true
+  },
+  {
+    "id": "es_ES-mls_9972-low",
+    "display_name": "Es Es - Mls_9972 Low",
+    "language": "es_ES",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/es_ES-mls_9972-low/es_ES-mls_9972-low.onnx",
+    "available": true
+  },
+  {
+    "id": "es_ES-sharvard-medium",
+    "display_name": "Es Es - Sharvard Medium",
+    "language": "es_ES",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/es_ES-sharvard-medium/es_ES-sharvard-medium.onnx",
+    "available": true
+  },
+  {
+    "id": "es_MX-ald-medium",
+    "display_name": "Es Mx - Ald Medium",
+    "language": "es_MX",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/es_MX-ald-medium/es_MX-ald-medium.onnx",
+    "available": true
+  },
+  {
+    "id": "es_MX-claude-high",
+    "display_name": "Es Mx - Claude High",
+    "language": "es_MX",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/es_MX-claude-high/es_MX-claude-high.onnx",
+    "available": true
+  },
+  {
+    "id": "fr_FR-gilles-low",
+    "display_name": "Fr Fr - Gilles Low",
+    "language": "fr_FR",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/fr_FR-gilles-low/fr_FR-gilles-low.onnx",
+    "available": true
+  },
+  {
+    "id": "fr_FR-mls-medium",
+    "display_name": "Fr Fr - Mls Medium",
+    "language": "fr_FR",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/fr_FR-mls-medium/fr_FR-mls-medium.onnx",
+    "available": true
+  },
+  {
+    "id": "fr_FR-mls_1840-low",
+    "display_name": "Fr Fr - Mls_1840 Low",
+    "language": "fr_FR",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/fr_FR-mls_1840-low/fr_FR-mls_1840-low.onnx",
+    "available": true
+  },
+  {
+    "id": "fr_FR-siwis-low",
+    "display_name": "Fr Fr - Siwis Low",
+    "language": "fr_FR",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/fr_FR-siwis-low/fr_FR-siwis-low.onnx",
+    "available": true
+  },
+  {
+    "id": "fr_FR-siwis-medium",
+    "display_name": "Fr Fr - Siwis Medium",
+    "language": "fr_FR",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/fr_FR-siwis-medium/fr_FR-siwis-medium.onnx",
+    "available": true
+  },
+  {
+    "id": "fr_FR-tom-medium",
+    "display_name": "Fr Fr - Tom Medium",
+    "language": "fr_FR",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/fr_FR-tom-medium/fr_FR-tom-medium.onnx",
+    "available": true
+  },
+  {
+    "id": "fr_FR-upmc-medium",
+    "display_name": "Fr Fr - Upmc Medium",
+    "language": "fr_FR",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/fr_FR-upmc-medium/fr_FR-upmc-medium.onnx",
+    "available": true
+  },
+  {
+    "id": "hi_IN-pratham-medium",
+    "display_name": "Hi In - Pratham Medium",
+    "language": "hi_IN",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/hi_IN-pratham-medium/hi_IN-pratham-medium.onnx",
+    "available": true
+  },
+  {
+    "id": "hi_IN-priyamvada-medium",
+    "display_name": "Hi In - Priyamvada Medium",
+    "language": "hi_IN",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/hi_IN-priyamvada-medium/hi_IN-priyamvada-medium.onnx",
+    "available": true
+  },
+  {
+    "id": "hi_IN-rohan-medium",
+    "display_name": "Hi In - Rohan Medium",
+    "language": "hi_IN",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/hi_IN-rohan-medium/hi_IN-pratham-medium.onnx",
+    "available": true
+  },
+  {
+    "id": "ml_IN-arjun-medium",
+    "display_name": "Ml In - Arjun Medium",
+    "language": "ml_IN",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/ml_IN-arjun-medium/ml_IN-arjun-medium.onnx",
+    "available": true
+  },
+  {
+    "id": "ml_IN-meera-medium",
+    "display_name": "Ml In - Meera Medium",
+    "language": "ml_IN",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/ml_IN-meera-medium/ml_IN-meera-medium.onnx",
+    "available": true
+  },
+  {
+    "id": "te_IN-maya-medium",
+    "display_name": "Te In - Maya Medium",
+    "language": "te_IN",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/te_IN-maya-medium/te_IN-maya-medium.onnx",
+    "available": true
+  },
+  {
+    "id": "te_IN-padmavathi-medium",
+    "display_name": "Te In - Padmavathi Medium",
+    "language": "te_IN",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/te_IN-padmavathi-medium/te_IN-padmavathi-medium.onnx",
+    "available": true
+  },
+  {
+    "id": "te_IN-venkatesh-medium",
+    "display_name": "Te In - Venkatesh Medium",
+    "language": "te_IN",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/te_IN-venkatesh-medium/te_IN-venkatesh-medium.onnx",
+    "available": true
+  },
+  {
+    "id": "zh_CN-huayan-medium",
+    "display_name": "Zh Cn - Huayan Medium",
+    "language": "zh_CN",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/zh_CN-huayan-medium/zh_CN-huayan-medium.onnx",
+    "available": true
+  },
+  {
+    "id": "zh_CN-huayan-x_low",
+    "display_name": "Zh Cn - Huayan X_Low",
+    "language": "zh_CN",
+    "gender": "neutral",
+    "engine": "piper",
+    "model_path": "/models/zh_CN-huayan-x_low/zh_CN-huayan-x_low.onnx",
+    "available": true
+  }
+]
+
+============================================================
+TEST: TTS Sync (short text)
+URL:  http://127.0.0.1:8002/tts/sync
+============================================================
+STATUS: 200
+RESPONSE:
+{
+  "duration": 1.5209070294784581,
+  "text": "Hello from local test",
+  "voice_id": "en_US-lessac-high",
+  "engine": "piper",
+  "sample_rate": 22050,
+  "status": "success",
+  "audio_url": "https://res.cloudinary.com/dnxatxoij/video/upload/v1769633179/tts/en_US-lessac-high/137e466b3b09.wav"
+}
+
+============================================================
+SUMMARY
+============================================================
+health               PASS
+config               PASS
+voices               PASS
+tts_sync             PASS
+
+Total: 4/4 tests passed
